@@ -1,0 +1,44 @@
+modules:
+  jira:issuePanel:
+    - key: incident-war-room-hello-world-panel
+      resource: main
+      resolver:
+        function: resolver
+      viewportSize: medium
+      title: Incident War Room Panel
+      icon: https://developer.atlassian.com/platform/forge/images/issue-panel-icon.svg
+  jira:globalPage:
+    - key: incident-war-room-global-page
+      resource: main
+      resolver:
+        function: resolver
+      title: Incident War Room Global
+      label: War Room Global
+  rovo:agent:
+    - key: incident-commander
+      name: Incident Commander
+      description: An AI agent that helps manage incidents by summarizing status and suggesting actions.
+      prompt: >
+        You are an intelligent Incident Commander assistant for Jira Service Management.
+        Your goal is to help the team resolve high-priority incidents faster.
+        You have access to the ticket details and comments.
+        Always provide a "Situation Report" (SitRep) when asked for status.
+    
+  function:
+    - key: resolver
+      handler: index.handler
+    - key: rovo-resolver
+      handler: rovo_resolver.handler
+resources:
+  - key: main
+    path: static/hello-world/build
+permissions:
+  scopes:
+    - read:jira-work
+    - storage:app
+app:
+  runtime:
+    name: nodejs22.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/bda372ef-7911-4932-8b6b-7748e392f5c8
