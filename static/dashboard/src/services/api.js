@@ -44,6 +44,13 @@ const api = {
     },
 
     /**
+     * Get current user context (permissions, role) for RBAC
+     */
+    getUserContext: async () => {
+        return await invoke('getUserContext');
+    },
+
+    /**
      * Update an incident summary
      */
     updateIncident: async (issueIdOrKey, summary) => {

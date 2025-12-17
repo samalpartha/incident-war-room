@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { router } from '@forge/bridge';
 
-const IncidentList = ({ incidents, onDelete, onUpdate }) => {
+const IncidentList = ({ incidents, onDelete, onUpdate, userContext = { permissions: [] } }) => {
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
+    const hasDeletePermission = userContext.permissions && userContext.permissions.includes('delete');
+    const hasUpdatePermission = userContext.permissions && userContext.permissions.includes('update');
 
     const handleOpenIssue = (issueKey) => {
         router.open(`/browse/${issueKey}`);
@@ -42,16 +44,22 @@ const IncidentList = ({ incidents, onDelete, onUpdate }) => {
                                     {inc.status}
                                 </span>
                             </div>
-                            <button
-                                onClick={() => onDelete(inc.id)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--text-muted)', padding: 0 }}
-                                title="Dismiss Incident"
-                            >
-                                ×
-                            </button>
                         </div>
 
-                        {editingId === inc.id ? (
+                        <div style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', display: 'flex', gap: '0.25rem' }}>
+                            {hasDeletePermission && (
+                                <button
+                                    onClick={() => onDelete(inc.id)}
+                                    className="btn btn-danger"
+                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                                    title="Delete incident (Commanders only)"
+                                >
+                                    🗑️
+                                </button>
+                            )}
+                        </div>
+
+                        {editingId === inc.id && hasUpdatePermission ? (
                             <div style={{ display: 'flex', gap: '0.5rem', margin: '0.25rem 0' }}>
                                 <input
                                     value={editValue}
@@ -63,11 +71,11 @@ const IncidentList = ({ incidents, onDelete, onUpdate }) => {
                             </div>
                         ) : (
                             <h3
-                                style={{ fontSize: '1rem', margin: '0.25rem 0', cursor: 'pointer' }}
-                                onClick={() => startEdit(inc)}
-                                title="Click to edit summary"
+                                style={{ fontSize: '1rem', margin: '0.25rem 0', cursor: hasUpdatePermission ? 'pointer' : 'default' }}
+                                onClick={() => hasUpdatePermission && startEdit(inc)}
+                                title={hasUpdatePermission ? "Click to edit summary" : "No permission to edit"}
                             >
-                                {inc.summary} ✎
+                                {inc.summary} {hasUpdatePermission && '✎'}
                             </h3>
                         )}
 

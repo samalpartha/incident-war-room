@@ -17,10 +17,26 @@ function App() {
   const [notification, setNotification] = useState(null); // { message, type }
   const [filterMine, setFilterMine] = useState(false);
   const [filterProjectKey, setFilterProjectKey] = useState('');
+  const [userContext, setUserContext] = useState({ permissions: ['view'], roleLabel: 'Loading...' }); // RBAC
 
   const handleNotify = (message, type = 'info') => {
     setNotification({ message, type });
   };
+
+  // RBAC: Fetch user context on mount
+  useEffect(() => {
+    const fetchUserContext = async () => {
+      try {
+        const result = await api.getUserContext();
+        if (result.success) {
+          setUserContext(result);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user context:', error);
+      }
+    };
+    fetchUserContext();
+  }, []);
 
   const loadIncidents = async () => {
     try {
@@ -212,6 +228,7 @@ function App() {
           handleNotify('Refreshing data...', 'info');
           loadIncidents();
         }}
+        userContext={userContext}
       />
 
       <CreateTicketModal
@@ -283,7 +300,7 @@ function App() {
 
       {view === 'dashboard' ? (
         <main className="grid">
-          <IncidentList incidents={incidents} onDelete={handleDelete} onUpdate={handleUpdate} />
+          <IncidentList incidents={incidents} onDelete={handleDelete} onUpdate={handleUpdate} userContext={userContext} />
 
           <section className="grid cols-2">
             <PitCrew />

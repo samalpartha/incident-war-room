@@ -1,5 +1,6 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
+import { getUserGroups, getUserPermissions, hasPermission, getUserPrimaryRole, ROLE_LABELS } from '../utils/permissions.js';
 
 const resolver = new Resolver();
 
@@ -34,35 +35,79 @@ resolver.define('getProjectDetails', async (req) => {
   }
 });
 
+// RBAC: Get current user's context (groups, permissions, role)
+resolver.define('getUserContext', async (req) => {
+  try {
+    const accountId = req.context.accountId;
+    const groups = await getUserGroups(accountId);
+    const permissions = getUserPermissions(groups);
+    const primaryRole = getUserPrimaryRole(groups);
+
+    return {
+      success: true,
+      accountId,
+      groups,
+      permissions,
+      role: primaryRole,
+      roleLabel: ROLE_LABELS[primaryRole] || 'Observer'
+    };
+  } catch (error) {
+    console.error('Error fetching user context:', error);
+    // Fallback to view-only permissions
+    return {
+      success: true,
+      accountId: req.context.accountId,
+      groups: [],
+      permissions: ['view'],
+      role: 'observers',
+      roleLabel: 'Observer'
+    };
+  }
+});
+
 resolver.define('createIncident', async (req) => {
   const { summary, description, issueType, issueTypeId, projectKey, assigneeId } = req.payload;
+
+  // RBAC: Check if user has create permission
+  const accountId = req.context.accountId;
+  const groups = await getUserGroups(accountId);
+  const permissions = await getUserPermissions(groups); // Await this call
+
+  if (!hasPermission(permissions, 'create')) {
+    return { success: false, error: 'Permission denied: You do not have permission to create incidents' };
+  }
+
   try {
     const finalProjectKey = projectKey || await getProjectKey();
 
     // Construct Issue Type object: Prefer ID, fallback to Name
     const issueTypeObj = issueTypeId ? { id: issueTypeId } : { name: issueType || "Task" };
 
-    const body = {
-      fields: {
-        project: { key: finalProjectKey },
-        summary: summary || `Incident declared at ${new Date().toISOString()}`,
-        description: {
-          type: "doc",
-          version: 1,
-          content: [{ type: "paragraph", content: [{ type: "text", text: description || "Declared from War Room." }] }]
-        },
-        issuetype: issueTypeObj,
-        ...(assigneeId ? { assignee: { id: assigneeId } } : {})
-      }
+    const fields = {
+      project: { key: finalProjectKey },
+      summary: summary || "Incident",
+      description: {
+        type: "doc",
+        version: 1,
+        content: [{ type: "paragraph", content: [{ type: "text", text: description || "No description provided" }] }]
+      },
+      issuetype: issueTypeObj
     };
+
+    if (assigneeId) {
+      fields.assignee = { id: assigneeId };
+    }
 
     const response = await api.asUser().requestJira(route`/rest/api/3/issue`, {
       method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
     });
+
     const data = await response.json();
-    if (response.status === 201) return { success: true, ...data };
+    if (response.status === 201) {
+      return { success: true, key: data.key, id: data.id };
+    }
     // Return explicit error so frontend can show it
     return { success: false, error: JSON.stringify(data.errors || data) };
   } catch (error) {
@@ -126,6 +171,16 @@ resolver.define('getUsers', async (req) => {
 
 resolver.define('updateIncident', async (req) => {
   const { issueIdOrKey, summary } = req.payload;
+
+  // RBAC: Check if user has update permission
+  const accountId = req.context.accountId;
+  const groups = await getUserGroups(accountId);
+  const permissions = getUserPermissions(groups);
+
+  if (!hasPermission(permissions, 'update')) {
+    return { success: false, error: 'Permission denied: You do not have permission to update incidents' };
+  }
+
   try {
     const body = { fields: { summary: summary } };
     const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueIdOrKey}`, {
@@ -141,6 +196,16 @@ resolver.define('updateIncident', async (req) => {
 
 resolver.define('deleteIncident', async (req) => {
   const { issueIdOrKey } = req.payload;
+
+  // RBAC: Check if user has delete permission
+  const accountId = req.context.accountId;
+  const groups = await getUserGroups(accountId);
+  const permissions = getUserPermissions(groups);
+
+  if (!hasPermission(permissions, 'delete')) {
+    return { success: false, error: 'Permission denied: You do not have permission to delete incidents' };
+  }
+
   try {
     const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueIdOrKey}`, {
       method: 'DELETE'
