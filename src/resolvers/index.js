@@ -1,7 +1,9 @@
 import Resolver from '@forge/resolver';
-import api, { route } from '@forge/api';
+import api, { route, storage } from '@forge/api';
+import { Queue } from '@forge/events';
 import { getUserGroups, getUserPermissions, hasPermission, getUserPrimaryRole, ROLE_LABELS } from '../utils/permissions.js';
 import { searchWeb } from '../utils/search.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const resolver = new Resolver();
 
@@ -397,7 +399,7 @@ resolver.define('get-incident-handler', async (req) => {
   }
 });
 
-// Action: Search Solutions (for Rovo Agent)
+// Action: Search Solutions (for Rovo Agent) - Async Pattern
 resolver.define('search-solutions-handler', async (req) => {
   const { query } = req.payload || {};
 
@@ -406,27 +408,66 @@ resolver.define('search-solutions-handler', async (req) => {
   }
 
   try {
-    const searchResults = await searchWeb(query);
+    // Generate unique job ID
+    const jobId = `search-${uuidv4()}`;
 
-    if (!searchResults.success) {
+    console.log(`[SEARCH] Queuing async job ${jobId} for query: "${query}"`);
+
+    // Fire async event (doesn't wait for completion)
+    const queue = new Queue({ key: 'async-search' });
+    await queue.push({
+      jobId,
+      query
+    });
+
+    // Return job ID immediately - frontend will poll for results
+    return {
+      success: true,
+      jobId,
+      message: `Search initiated for: "${query}"`,
+      status: 'pending',
+      polling: true // Signal to frontend to start polling
+    };
+  } catch (error) {
+    console.error('[SEARCH] Failed to queue job:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to initiate search'
+    };
+  }
+});
+
+// Poll async job result from Forge Storage
+resolver.define('poll-job-result', async (req) => {
+  const { jobId } = req.payload || {};
+
+  if (!jobId) {
+    return { success: false, error: 'Job ID required' };
+  }
+
+  try {
+    // Check Forge Storage for result
+    const result = await storage.get(jobId);
+
+    if (!result) {
+      // Job still processing
       return {
-        success: false,
-        error: 'Search failed: ' + searchResults.error
+        success: true,
+        status: 'pending',
+        message: 'Job still processing...'
       };
     }
 
+    // Job completed or failed - return the stored result
     return {
       success: true,
-      query,
-      results: searchResults.results,
-      totalFound: searchResults.totalFound,
-      message: `Found ${searchResults.totalFound} results for: "${query}"`
+      ...result
     };
   } catch (error) {
-    console.error('Rovo search error:', error);
+    console.error('[POLL] Error checking job status:', error);
     return {
       success: false,
-      error: error.message || 'Failed to search for solutions'
+      error: error.message || 'Failed to check job status'
     };
   }
 });

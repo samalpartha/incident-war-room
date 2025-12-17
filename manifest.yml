@@ -63,6 +63,13 @@ modules:
       handler: index.handler
     - key: search-sol-handler
       handler: index.handler
+    - key: async-search-handler
+      handler: resolvers/async-search.handler
+  trigger:
+    - key: async-search-trigger
+      function: async-search-handler
+      events:
+        - ari:cloud:ecosystem::extension/async-search
 resources:
   - key: main-resource
     path: static/dashboard/build
@@ -79,6 +86,7 @@ permissions:
     - read:chat:rovo
     - read:confluence-content.all
     - read:confluence-space.summary
+    - storage:app
   content:
     styles:
       - unsafe-inline
