@@ -12,6 +12,41 @@ const getProjectKey = async () => {
   return projectsData.values[0].key;
 };
 
+// Helper: Add timeline comment to Jira issue
+const addComment = async (issueKey, commentText) => {
+  try {
+    const response = await api.asUser().requestJira(
+      route`/rest/api/3/issue/${issueKey}/comment`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          body: {
+            type: 'doc',
+            version: 1,
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: commentText }]
+              }
+            ]
+          }
+        })
+      }
+    );
+
+    if (response.status === 201) {
+      console.log(`[TIMELINE] Comment added to ${issueKey}: ${commentText}`);
+      return true;
+    }
+    console.warn(`[TIMELINE] Failed to add comment to ${issueKey}, status: ${response.status}`);
+    return false;
+  } catch (error) {
+    console.error(`[TIMELINE] Error adding comment to ${issueKey}:`, error);
+    return false; // Don't fail the main operation if comment fails
+  }
+};
+
 resolver.define('getProjects', async (req) => {
   try {
     const response = await api.asUser().requestJira(route`/rest/api/3/project/search?maxResults=50`);
@@ -107,6 +142,18 @@ resolver.define('createIncident', async (req) => {
 
     const data = await response.json();
     if (response.status === 201) {
+      // Add timeline comment
+      const timestamp = new Date().toLocaleString('en-US', {
+        timeZone: 'UTC',
+        dateStyle: 'short',
+        timeStyle: 'medium'
+      });
+
+      await addComment(
+        data.key,
+        `🚨 Incident created via War Room at ${timestamp}`
+      );
+
       return { success: true, key: data.key, id: data.id };
     }
     // Return explicit error so frontend can show it
@@ -189,7 +236,21 @@ resolver.define('updateIncident', async (req) => {
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
-    if (response.status === 204) return { success: true, message: "Updated successfully" };
+    if (response.status === 204) {
+      // Add timeline comment
+      const timestamp = new Date().toLocaleString('en-US', {
+        timeZone: 'UTC',
+        dateStyle: 'short',
+        timeStyle: 'medium'
+      });
+
+      await addComment(
+        issueIdOrKey,
+        `✏️ Summary updated via War Room at ${timestamp}\nNew summary: ${summary}`
+      );
+
+      return { success: true, message: "Updated successfully" };
+    }
     const data = await response.json();
     throw new Error(JSON.stringify(data.errors || data));
   } catch (error) { console.error(error); throw error; }
@@ -208,6 +269,19 @@ resolver.define('deleteIncident', async (req) => {
   }
 
   try {
+    // Add final timeline comment before deletion
+    const timestamp = new Date().toLocaleString('en-US', {
+      timeZone: 'UTC',
+      dateStyle: 'short',
+      timeStyle: 'medium'
+    });
+
+    await addComment(
+      issueIdOrKey,
+      `🗑️ Incident closed via War Room at ${timestamp}`
+    );
+
+    // Now delete the issue
     const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueIdOrKey}`, {
       method: 'DELETE'
     });
