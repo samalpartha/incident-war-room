@@ -49,18 +49,18 @@ resolver.define('getUserContext', async (req) => {
       groups,
       permissions,
       role: primaryRole,
-      roleLabel: ROLE_LABELS[primaryRole] || 'Observer'
+      roleLabel: primaryRole ? (ROLE_LABELS[primaryRole] || 'Observer') : 'Full Access'
     };
   } catch (error) {
     console.error('Error fetching user context:', error);
-    // Fallback to view-only permissions
+    // Fallback to full access (preserve backward compatibility)
     return {
       success: true,
       accountId: req.context.accountId,
       groups: [],
-      permissions: ['view'],
-      role: 'observers',
-      roleLabel: 'Observer'
+      permissions: ['view', 'create', 'update', 'delete', 'comment'],
+      role: null,
+      roleLabel: 'Full Access'
     };
   }
 });

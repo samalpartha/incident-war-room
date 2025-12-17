@@ -29,14 +29,28 @@ export async function getUserGroups(accountId) {
 export function getUserPermissions(userGroups) {
     const permissions = new Set();
 
-    userGroups.forEach(group => {
-        const groupPerms = ROLES[group];
-        if (groupPerms) {
-            groupPerms.forEach(p => permissions.add(p));
-        }
-    });
+    // Check if user is in any RBAC groups
+    const hasRBACGroups = userGroups.some(group => ROLES[group]);
 
-    // Default: everyone can view
+    if (hasRBACGroups) {
+        // User is in RBAC groups - calculate specific permissions
+        userGroups.forEach(group => {
+            const groupPerms = ROLES[group];
+            if (groupPerms) {
+                groupPerms.forEach(p => permissions.add(p));
+            }
+        });
+    } else {
+        // User has NO RBAC groups - grant full access (backward compatibility)
+        // This preserves existing behavior where everyone could create/update/delete
+        permissions.add('view');
+        permissions.add('create');
+        permissions.add('update');
+        permissions.add('delete');
+        permissions.add('comment');
+    }
+
+    // Ensure everyone can at least view
     permissions.add('view');
 
     return Array.from(permissions);
@@ -51,5 +65,8 @@ export function getUserPrimaryRole(userGroups) {
     if (userGroups.includes('incident-commanders')) return 'incident-commanders';
     if (userGroups.includes('oncall-engineers')) return 'oncall-engineers';
     if (userGroups.includes('developers')) return 'developers';
-    return 'observers';
+    if (userGroups.includes('observers')) return 'observers';
+
+    // No RBAC groups = Full Access (default)
+    return null;
 }
