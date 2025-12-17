@@ -37,22 +37,61 @@ modules:
       function: create-inc-handler
       name: Create Incident
       description: Creates a new incident ticket in Jira
+      inputs:
+        summary:
+          title: Summary
+          type: string
+          required: true
+          description: "Brief description of the incident (e.g., 'Database connection pool exhausted')"
+        description:
+          title: Description
+          type: string
+          required: false
+          description: "Detailed incident description with context and impact"
+        projectKey:
+          title: Project Key
+          type: string
+          required: false
+          description: "Jira project key (e.g., 'KAN'). Defaults to KAN if not provided."
+        assigneeId:
+          title: Assignee ID
+          type: string
+          required: false
+          description: "Jira account ID of the assignee. Leave empty for unassigned."
       actionType: create
     - key: list-incidents-action
       function: list-inc-handler
       name: List Active Incidents
       description: Retrieves all active incidents
       actionType: query
+      inputs:
+        projectKey:
+          title: Project Key
+          type: string
+          required: false
+          description: "Filter incidents by Jira project (e.g., 'KAN'). Leave empty for all projects."
     - key: get-incident-status-action
       function: get-inc-handler
       name: Get Incident Status
       description: Gets detailed status of a specific incident
       actionType: query
+      inputs:
+        issueKey:
+          title: Issue Key
+          type: string
+          required: true
+          description: "Jira issue key (e.g., 'KAN-45')"
     - key: search-solutions-action
       function: search-sol-handler
       name: Search Solutions
       description: Searches web for technical solutions and troubleshooting guides
       actionType: query
+      inputs:
+        query:
+          title: Search Query
+          type: string
+          required: true
+          description: "Technical search query (e.g., 'Redis connection timeout', 'PostgreSQL max_connections error')"
   function:
     - key: resolver
       handler: index.handler
