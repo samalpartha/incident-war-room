@@ -22,10 +22,11 @@ modules:
       description: AI assistant for incident management and war room operations
       prompt: prompts/agent-prompt.md
       conversationStarters:
-        - "Create a new incident"
-        - "Show me active incidents"
-        - "What's the status of recent incidents?"
-        - "Search for Redis connection timeout solutions"
+        - "🚨 Create a critical database incident"
+        - "📋 Show me all active incidents"
+        - "🔍 Search for Redis connection timeout solutions"
+        - "📊 What's the status of KAN-50?"
+        - "🆘 Help! Production is down"
       actions:
         - create-incident-action
         - list-incidents-action
