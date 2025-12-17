@@ -5,16 +5,22 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "lint": "eslint src/**/*"
+    "lint": "eslint src/**/*",
+    "test": "jest --coverage"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@types/jest": "^30.0.0",
+    "babel-jest": "^30.2.0",
     "eslint": "^8.56.0",
-    "eslint-plugin-react-hooks": "^4.6.0"
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "jest": "^30.2.0"
   },
   "dependencies": {
     "@forge/api": "^6.4.2",
-    "@forge/resolver": "1.7.1",
     "@forge/events": "^0.4.0",
+    "@forge/resolver": "1.7.1",
     "uuid": "^9.0.0"
   }
 }
