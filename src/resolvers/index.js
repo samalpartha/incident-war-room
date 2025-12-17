@@ -116,45 +116,39 @@ resolver.define('createIncident', async (req) => {
   }
 
   try {
-    const finalProjectKey = projectKey || await getProjectKey();
-
-    // Construct Issue Type object: Prefer ID, fallback to Name
-    const issueTypeObj = issueTypeId ? { id: issueTypeId } : { name: issueType || "Task" };
-
     const fields = {
-      project: { key: finalProjectKey },
-      summary: summary || "Incident",
-      description: {
-        type: "doc",
-        version: 1,
-        content: [{ type: "paragraph", content: [{ type: "text", text: description || "No description provided" }] }]
-      },
-      issuetype: issueTypeObj
+      project: { key: projectKey || 'KAN' },
+      summary: summary,
+      issuetype: { id: issueTypeId || '10001' }
     };
 
-    if (assigneeId) {
-      fields.assignee = { id: assigneeId };
+    if (description) {
+      fields.description = {
+        type: 'doc',
+        version: 1,
+        content: [{
+          type: 'paragraph',
+          content: [{ type: 'text', text: description }]
+        }]
+      };
     }
+
+    if (assigneeId) fields.assignee = { id: assigneeId };
 
     const response = await api.asUser().requestJira(route`/rest/api/3/issue`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields })
     });
 
     const data = await response.json();
     if (response.status === 201) {
       // Add timeline comment
-      const timestamp = new Date().toLocaleString('en-US', {
-        timeZone: 'UTC',
+      await addComment(data.key, '🚨 Incident created via War Room at ' + new Date().toLocaleString('en-US', {
         dateStyle: 'short',
-        timeStyle: 'medium'
-      });
-
-      await addComment(
-        data.key,
-        `🚨 Incident created via War Room at ${timestamp}`
-      );
+        timeStyle: 'medium',
+        timeZone: 'UTC'
+      }));
 
       return { success: true, key: data.key, id: data.id };
     }
@@ -240,16 +234,11 @@ resolver.define('updateIncident', async (req) => {
     });
     if (response.status === 204) {
       // Add timeline comment
-      const timestamp = new Date().toLocaleString('en-US', {
-        timeZone: 'UTC',
+      await addComment(issueIdOrKey, '✏️ Summary updated via War Room at ' + new Date().toLocaleString('en-US', {
         dateStyle: 'short',
-        timeStyle: 'medium'
-      });
-
-      await addComment(
-        issueIdOrKey,
-        `✏️ Summary updated via War Room at ${timestamp}\nNew summary: ${summary}`
-      );
+        timeStyle: 'medium',
+        timeZone: 'UTC'
+      }) + '. New summary: "' + summary + '"');
 
       return { success: true, message: "Updated successfully" };
     }
@@ -271,23 +260,20 @@ resolver.define('deleteIncident', async (req) => {
   }
 
   try {
-    // Add final timeline comment before deletion
-    const timestamp = new Date().toLocaleString('en-US', {
-      timeZone: 'UTC',
+    // Add timeline comment before deletion
+    await addComment(issueIdOrKey, '🗑️ Incident closed via War Room at ' + new Date().toLocaleString('en-US', {
       dateStyle: 'short',
-      timeStyle: 'medium'
-    });
+      timeStyle: 'medium',
+      timeZone: 'UTC'
+    }));
 
-    await addComment(
-      issueIdOrKey,
-      `🗑️ Incident closed via War Room at ${timestamp}`
-    );
-
-    // Now delete the issue
     const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueIdOrKey}`, {
       method: 'DELETE'
     });
-    if (response.status === 204) return { success: true, message: "Deleted successfully" };
+
+    if (response.status === 204) {
+      return { success: true, message: "Deleted successfully" };
+    }
     const data = await response.json();
     throw new Error(JSON.stringify(data.errors || data));
   } catch (error) { console.error(error); throw error; }
