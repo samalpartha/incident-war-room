@@ -1,0 +1,75 @@
+modules:
+  jira:globalPage:
+    - key: incident-war-room-page
+      resource: main-resource
+      resolver:
+        function: resolver
+      title: Incident War Room
+  jira:projectPage:
+    - key: incident-war-room-project-page
+      resource: main-resource
+      resolver:
+        function: resolver
+      title: Incident War Room
+  confluence:globalPage:
+    - key: incident-war-room-confluence
+      route: war-room
+      resource: main-resource
+      title: Incident War Room
+  rovo:agent:
+    - key: incident-commander
+      name: Incident Commander
+      description: AI assistant for incident management and war room operations
+      prompt: prompts/agent-prompt.md
+      conversationStarters:
+        - "Create a new incident"
+        - "Show me active incidents"
+        - "What's the status of recent incidents?"
+      actions:
+        - create-incident-action
+        - list-incidents-action
+        - get-incident-status-action
+  action:
+    - key: create-incident-action
+      function: create-inc-handler
+      name: Create Incident
+      description: Creates a new incident ticket in Jira
+      actionType: create
+    - key: list-incidents-action
+      function: list-inc-handler
+      name: List Active Incidents
+      description: Retrieves all active incidents
+      actionType: query
+    - key: get-incident-status-action
+      function: get-inc-handler
+      name: Get Incident Status
+      description: Gets detailed status of a specific incident
+      actionType: query
+  function:
+    - key: resolver
+      handler: index.handler
+    - key: create-inc-handler
+      handler: index.handler
+    - key: list-inc-handler
+      handler: index.handler
+    - key: get-inc-handler
+      handler: index.handler
+resources:
+  - key: main-resource
+    path: static/dashboard/build
+app:
+  runtime:
+    name: nodejs22.x
+  id: ari:cloud:ecosystem::app/389b8a6c-daa9-4780-b8f0-30eaf59d8e7b
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - read:project:jira
+    - read:jira-user
+    - read:chat:rovo
+    - read:confluence-content.all
+    - read:confluence-space.summary
+  content:
+    styles:
+      - unsafe-inline

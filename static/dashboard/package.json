@@ -1,17 +1,13 @@
 {
-  "name": "jira-issue-panel-custom-ui-static",
-  "version": "0.2.47",
+  "name": "automation-action-custom-ui-static",
   "private": true,
+  "version": "1.1.6",
   "homepage": ".",
   "dependencies": {
-    "@atlaskit/button": "^23.7.0",
-    "@atlaskit/checkbox": "^17.2.0",
     "@atlaskit/css-reset": "^6.6.2",
-    "@atlaskit/icon": "^29.1.0",
-    "@atlaskit/section-message": "^8.10.0",
-    "@atlaskit/textfield": "^8.2.0",
-    "@atlaskit/tokens": "^8.5.0",
-    "@forge/bridge": "5.10.0",
+    "@atlaskit/form": "^9.0.10",
+    "@atlaskit/textfield": "^6.0.1",
+    "@forge/bridge": "5.10.1",
     "react": "^16",
     "react-dom": "^16",
     "styled-components": "^6.1.19"

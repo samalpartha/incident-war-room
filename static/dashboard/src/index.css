@@ -1,0 +1,222 @@
+:root {
+  /* Dynamic Slate Palette - Proven for Dark Mode */
+  --bg-app: #0f172a;
+  /* Slate 900 - Deepest background */
+  --bg-panel: #1e293b;
+  /* Slate 800 - Component background */
+  --bg-hover: #334155;
+  /* Slate 700 - Interactive hover */
+
+  --border-subtle: #334155;
+  /* Slate 700 */
+  --border-focus: #94a3b8;
+  /* Slate 400 */
+
+  /* Text - High Contrast */
+  --text-primary: #f8fafc;
+  /* Slate 50 - Almost white */
+  --text-secondary: #cbd5e1;
+  /* Slate 300 - Clearly readable gray */
+  --text-muted: #94a3b8;
+  /* Slate 400 - For less important labels */
+
+  /* Accents - Vibrant and Clear */
+  --brand-primary: #3b82f6;
+  /* Blue 500 */
+  --brand-glow: rgba(59, 130, 246, 0.5);
+
+  --danger: #ef4444;
+  /* Red 500 */
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.3);
+
+  --success: #22c55e;
+  /* Green 500 */
+  --success-bg: rgba(34, 197, 94, 0.15);
+  --success-border: rgba(34, 197, 94, 0.3);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Enforce colors on headings to override Reset */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-primary);
+  margin-top: 0;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  /* Tighter headings look more modern */
+}
+
+p {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  max-width: 1000px;
+}
+
+/* Card - The main building block */
+.card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.card:hover {
+  border-color: var(--border-focus);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.39);
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.btn-secondary:hover {
+  background-color: var(--border-subtle);
+  border-color: var(--text-muted);
+}
+
+/* Status Badges - High Visibility */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-active {
+  background-color: var(--danger-bg);
+  color: #fca5a5;
+  /* Light Red */
+  border: 1px solid var(--danger-border);
+  box-shadow: 0 0 8px var(--danger-bg);
+}
+
+.status-resolved {
+  background-color: var(--success-bg);
+  color: #86efac;
+  /* Light Green */
+  border: 1px solid var(--success-border);
+}
+
+/* Grid Layouts */
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.cols-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Incident Item - Distinct Row */
+.incident-item {
+  background-color: rgba(255, 255, 255, 0.03);
+  /* Subtle lighten on top of card */
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+}
+
+.incident-item:last-child {
+  margin-bottom: 0;
+}
+
+.incident-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* Utility */
+.text-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Pulse Animation for Critical Status */
+@keyframes pulse-diffuse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.pulse-active {
+  animation: pulse-diffuse 2s infinite;
+}
