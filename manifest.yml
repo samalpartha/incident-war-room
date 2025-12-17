@@ -25,10 +25,12 @@ modules:
         - "Create a new incident"
         - "Show me active incidents"
         - "What's the status of recent incidents?"
+        - "Search for Redis connection timeout solutions"
       actions:
         - create-incident-action
         - list-incidents-action
         - get-incident-status-action
+        - search-solutions-action
   action:
     - key: create-incident-action
       function: create-inc-handler
@@ -45,6 +47,11 @@ modules:
       name: Get Incident Status
       description: Gets detailed status of a specific incident
       actionType: query
+    - key: search-solutions-action
+      function: search-sol-handler
+      name: Search Solutions
+      description: Searches web for technical solutions and troubleshooting guides
+      actionType: query
   function:
     - key: resolver
       handler: index.handler
@@ -53,6 +60,8 @@ modules:
     - key: list-inc-handler
       handler: index.handler
     - key: get-inc-handler
+      handler: index.handler
+    - key: search-sol-handler
       handler: index.handler
 resources:
   - key: main-resource

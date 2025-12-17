@@ -1,6 +1,7 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
 import { getUserGroups, getUserPermissions, hasPermission, getUserPrimaryRole, ROLE_LABELS } from '../utils/permissions.js';
+import { searchWeb } from '../utils/search.js';
 
 const resolver = new Resolver();
 
@@ -318,6 +319,40 @@ resolver.define('get-incident-handler', async (req) => {
     return {
       success: false,
       error: `Could not fetch ${issueKey}: ${error.message}`
+    };
+  }
+});
+
+// Action: Search Solutions (for Rovo Agent)
+resolver.define('search-solutions-handler', async (req) => {
+  const { query } = req.payload || {};
+
+  if (!query) {
+    return { success: false, error: 'Search query is required' };
+  }
+
+  try {
+    const searchResults = await searchWeb(query);
+
+    if (!searchResults.success) {
+      return {
+        success: false,
+        error: 'Search failed: ' + searchResults.error
+      };
+    }
+
+    return {
+      success: true,
+      query,
+      results: searchResults.results,
+      totalFound: searchResults.totalFound,
+      message: `Found ${searchResults.totalFound} results for: "${query}"`
+    };
+  } catch (error) {
+    console.error('Rovo search error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to search for solutions'
     };
   }
 });
