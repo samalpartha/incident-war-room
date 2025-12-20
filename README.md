@@ -68,6 +68,83 @@ For power users who want to use Claude/Cursor:
 - **Node.js:** Backend Resolvers.
 - **MCP (Model Context Protocol):** Open Agency Standard.
 
+
+---
+
+## 📐 System Architecture
+
+\`\`\`mermaid
+graph TD
+    User[User / Rovo Chat] -->|Interacts| UI[React Dashboard]
+    UI -->|Invokes| Resolver[Forge FaaS Backend]
+    Resolver -->|Calls| JiraAPI[Jira Cloud API]
+    
+    subgraph "Intelligence Layer"
+        Resolver -->|Triggers| AutoFix[Auto-Fix Agent]
+        Resolver -->|Triggers| Subtask[Subtask Generator]
+        Resolver -->|Triggers| Chaos[Chaos Monkey]
+    end
+
+    subgraph "External Control (MCP)"
+        Claude[Claude / Cursor] -->|MCP Protocol| Proxy[MCP Server]
+        Proxy -->|Direct Access| JiraAPI
+    end
+\`\`\`
+
+### Core Components
+1.  **Frontend (`/static/dashboard`):** A sophisticated React application using `@forge/bridge` to interact with Jira. It features a "Glassmorphism" UI design and real-time polling for the "Live Feed".
+2.  **Backend Resolvers (`/src/resolvers`):** detailed business logic implementing the "Agents".
+    *   `auto-fix-ticket-action`: Uses templates to rewrite descriptions.
+    *   `chaos-monkey-action`: Generates synthetic load for testing.
+3.  **Proxy Server (`proxy-server.js`):** A custom Node.js server that mocks the Atlassian environments, allowing the React dashboard to run locally with full functionality (including E2E reports).
+
+---
+
+## 👩‍💻 Developer Setup Guide
+
+### Prerequisites
+*   Node.js 22+
+*   Atlassian Forge CLI (`npm install -g @forge/cli`)
+*   Docker (Optional, only for local MCP server)
+
+### 1. Installation
+\`\`\`bash
+# Clone the repository
+git clone https://github.com/samalpartha/incident-war-room.git
+cd incident-war-room
+
+# Install dependencies (Root + Dashboard)
+npm install
+cd static/dashboard && npm install && cd ../..
+\`\`\`
+
+### 2. Running Locally (The "Proxy" Method)
+We use a custom proxy to mock Jira APIs so you can develop the UI instantly.
+\`\`\`bash
+# Start the Proxy Server + React App
+npm start
+\`\`\`
+*   **Dashboard:** [http://localhost:8080/qa-dashboard.html](http://localhost:8080/qa-dashboard.html)
+*   **API Mock:** `http://localhost:8080/rest/api/3/...`
+
+### 3. Running Tests
+We enforce **100% Code Coverage**.
+\`\`\`bash
+# Run Unit Tests
+npm test
+
+# Run End-to-End Simulation
+node e2e_simulation.js
+\`\`\`
+
+### 4. Deploying to Jira
+\`\`\`bash
+forge login
+forge check-warnings
+forge deploy
+forge install
+\`\`\`
+
 ---
 
 ## 🏆 Why This Wins
