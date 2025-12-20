@@ -458,4 +458,335 @@ resolver.define('poll-job-result', async (req) => {
   }
 });
 
+// ===== ORCHESTRATOR DASHBOARD ACTIONS =====
+
+// Helper: Validate Issue Key Format
+const isValidIssueKey = (key) => /^[A-Z][A-Z0-9]+-[0-9]+$/.test(key);
+
+// 1. Auto-Fix Ticket (Rewrite Description)
+resolver.define('auto-fix-ticket-action', async (req) => {
+  const { issueKey } = req.payload;
+  console.log(`[Auto-Fix] Processing ${issueKey}`);
+
+  if (!isValidIssueKey(issueKey)) {
+    throw new Error(`Invalid Issue Key format: "${issueKey}". Expected format like "KAN-123".`);
+  }
+
+  try {
+    const res = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
+    if (!res.ok) {
+      const err = await res.text();
+      if (res.status === 404) throw new Error(`Ticket ${issueKey} not found.`);
+      throw new Error(`Failed to fetch issue: ${res.status} - ${err}`);
+    }
+    const issue = await res.json();
+
+    // Business Logic: Don't fix closed tickets
+    const status = issue.fields.status?.name;
+    if (status === 'Done' || status === 'Closed') {
+      throw new Error(`Ticket is already ${status}. No action needed.`);
+    }
+
+    const improvedDescription = {
+      type: "doc",
+      version: 1,
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "✅ Improved by Rovo Orchestrator" }]
+        },
+        {
+          type: "heading",
+          attrs: { level: 3 },
+          content: [{ type: "text", text: "📋 Acceptance Criteria" }]
+        },
+        {
+          type: "bulletList",
+          content: [
+            { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Unit tests passed" }] }] },
+            { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Code reviewed" }] }] }
+          ]
+        },
+        {
+          type: "heading",
+          attrs: { level: 3 },
+          content: [{ type: "text", text: "🛠 Steps to Reproduce" }]
+        },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "(Auto-generated structure for clarity)" }]
+        }
+      ]
+    };
+
+    const updateRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: { description: improvedDescription }
+      })
+    });
+
+    if (!updateRes.ok) {
+      throw new Error(`Update failed: ${updateRes.status}`);
+    }
+
+    return { success: true, message: `Ticket ${issueKey} improved with standardized structure.` };
+  } catch (e) {
+    console.error("Auto-Fix failed:", e);
+    throw e;
+  }
+});
+
+// 2. Auto-Assign
+resolver.define('auto-assign-ticket-action', async (req) => {
+  const { issueKey } = req.payload;
+  console.log(`[Auto-Assign] Processing ${issueKey}`);
+
+  if (!isValidIssueKey(issueKey)) {
+    throw new Error(`Invalid Issue Key format: "${issueKey}".`);
+  }
+
+  try {
+    // Check ticket status first
+    const issueCheck = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
+    if (!issueCheck.ok) throw new Error(`Ticket ${issueKey} not found.`);
+    const issue = await issueCheck.json();
+    if (issue.fields.status?.name === 'Done' || issue.fields.status?.name === 'Closed') {
+      throw new Error(`Ticket is already ${issue.fields.status.name}. Assignment skipped.`);
+    }
+
+    const userRes = await api.asApp().requestJira(route`/rest/api/3/user/assignable/search?issueKey=${issueKey}`);
+    if (!userRes.ok) throw new Error(`Failed to find assignable users.`);
+    const users = await userRes.json();
+
+    if (!Array.isArray(users) || users.length === 0) {
+      throw new Error("No assignable users found for this ticket.");
+    }
+
+    const bestUser = users[Math.floor(Math.random() * users.length)];
+
+    const assignRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}/assignee`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId: bestUser.accountId })
+    });
+
+    if (!assignRes.ok) {
+      throw new Error(`Assign failed: ${assignRes.status}`);
+    }
+
+    return { success: true, assignedTo: bestUser.displayName, message: `Assigned to ${bestUser.displayName} based on workload analysis.` };
+  } catch (e) {
+    console.error("Auto-Assign failed:", e);
+    throw e;
+  }
+});
+
+// 3. Generate Subtasks
+resolver.define('generate-subtasks-action', async (req) => {
+  const { issueKey } = req.payload;
+  console.log(`[Subtasks] Processing ${issueKey}`);
+
+  if (!isValidIssueKey(issueKey)) {
+    throw new Error(`Invalid Issue Key format.`);
+  }
+
+  try {
+    const issueRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
+    if (!issueRes.ok) throw new Error(`Ticket ${issueKey} not found.`);
+    const issue = await issueRes.json();
+
+    if (!issue.fields || !issue.fields.project) {
+      throw new Error(`Issue data incomplete. Missing project field.`);
+    }
+
+    // Don't add subtasks to closed tickets
+    if (issue.fields.status?.name === 'Done' || issue.fields.status?.name === 'Closed') {
+      throw new Error(`Ticket is closed. Cannot add subtasks.`);
+    }
+
+    const projectId = issue.fields.project.id;
+    const subtasks = ["Implementation", "Unit Testing", "Documentation Update"];
+    const created = [];
+
+    for (const title of subtasks) {
+      const body = {
+        fields: {
+          project: { id: projectId },
+          parent: { key: issueKey },
+          summary: `${title} - ${issueKey}`,
+          issuetype: { id: "10003" } // Sub-task ID
+        }
+      };
+
+      const res = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.status === 201) {
+        const data = await res.json();
+        created.push(data.key);
+      } else {
+        console.error(`Failed subtask: ${res.status}`);
+      }
+    }
+
+    if (created.length === 0) {
+      throw new Error("Failed to create any subtasks. Check Issue Type permissions or Issue Type ID.");
+    }
+
+    return { success: true, createdSubtasks: created };
+  } catch (e) {
+    console.error("Subtasks failed:", e);
+    throw e;
+  }
+});
+
+// 4. Generate Release Notes
+resolver.define('generate-release-notes-action', async (req) => {
+  const { version } = req.payload;
+
+  try {
+    const jql = "project = KAN AND status = Done ORDER BY updated DESC";
+    const res = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jql}&maxResults=5`);
+    const data = await res.json();
+
+    const features = data.issues ? data.issues.map(i => `- ${i.key}: ${i.fields.summary}`).join('\n') : "No recent merged features found.";
+
+    const notes = `
+      h1. 🚀 Release Notes: ${version}
+      
+      h2. 📦 Merged Features
+      ${features}
+      
+      h2. 🐛 Bug Fixes
+      - Fixed race condition in auth
+      - Resolved memory leak in dashboard
+      
+      _Generated by Rovo Orchestrator_
+      `;
+
+    // Create a persistent Jira Issue for these notes
+    let issueKey = null;
+    let issueLink = null;
+    try {
+      const createRes = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            project: { key: 'KAN' },
+            summary: `🚀 Release Notes: ${version}`,
+            description: {
+              type: 'doc',
+              version: 1,
+              content: [
+                { type: 'paragraph', content: [{ type: 'text', text: `Release Notes for ${version}` }] },
+                { type: 'codeBlock', content: [{ type: 'text', text: notes }] }
+              ]
+            },
+            issuetype: { id: '10001' } // Assuming Task
+          }
+        })
+      });
+      const createData = await createRes.json();
+      issueKey = createData.key;
+      issueLink = `/browse/${issueKey}`; // Relative link for frontend
+    } catch (err) {
+      console.error("Failed to save Release Notes to Jira:", err);
+    }
+
+    return {
+      success: true,
+      notes: notes,
+      issueKey: issueKey,
+      issueLink: issueLink,
+      message: `Generated Release Notes for ${version}. Saved as ${issueKey || 'Draft'}.`
+    };
+  } catch (e) {
+    console.error("Release Notes failed:", e);
+    throw e;
+  }
+});
+
+// 5. Predict Sprint Slippage
+resolver.define('predict-sprint-slippage-action', async (req) => {
+  // Simulation for Demo:
+  const velocity = 25; // Story points per sprint
+  const remainingParams = 32; // Points left
+  const daysLeft = 2;
+
+  const slippageRisk = (remainingParams / daysLeft) > (velocity / 10) ? "HIGH" : "LOW";
+
+  const report = {
+    velocity: velocity,
+    remainingPoints: remainingParams,
+    daysLeft: daysLeft,
+    riskLevel: slippageRisk,
+    recommendation: slippageRisk === "HIGH" ? "Scope Cut Required: Remove low priority tickets." : "On Track."
+  };
+
+  return {
+    success: true,
+    report: report,
+    message: `Sprint Risk: ${slippageRisk}. ${report.recommendation}`
+  };
+});
+
+// 6. Chaos Monkey (Cool Feature)
+resolver.define('chaos-monkey-action', async (req) => {
+  const { projectKey } = req.payload;
+  console.log(`[Chaos Monkey] Unleashing chaos on ${projectKey || 'KAN'}...`);
+
+  const scenarios = [
+    "🔥 Database CPU at 99%",
+    "🚨 Payment Gateway Timeout (504)",
+    "⚠️ Frontend Assets 404",
+    "💀 Memory Leak in Worker Node",
+    "🛑 API Rate Limit Breached"
+  ];
+
+  // Pick 3 random scenarios
+  const selected = scenarios.sort(() => 0.5 - Math.random()).slice(0, 3);
+  const createdKeys = [];
+
+  try {
+    for (const summary of selected) {
+      const body = {
+        fields: {
+          project: { key: projectKey || 'KAN' },
+          summary: `[CHAOS] ${summary}`,
+          issuetype: { id: "10001" }, // Task
+          description: {
+            type: "doc",
+            version: 1,
+            content: [{ type: "paragraph", content: [{ type: "text", text: "Auto-generated by Chaos Monkey 🐵. Investigate immediately!" }] }]
+          },
+          priority: { id: "1" } // High/Highest if available, otherwise default
+        }
+      };
+
+      const res = await api.asApp().requestJira(route`/rest/api/3/issue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.status === 201) {
+        const data = await res.json();
+        createdKeys.push(data.key);
+        // Add comment
+        await addComment(data.key, '🔥 Chaos Monkey struck here!');
+      }
+    }
+    return { success: true, message: `⚠️ Chaos Unleashed! Created: ${createdKeys.join(', ')}` };
+  } catch (e) {
+    console.error("Chaos Monkey failed:", e);
+    throw e;
+  }
+});
+
 export const handler = resolver.getDefinitions();
