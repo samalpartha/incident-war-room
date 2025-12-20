@@ -81,4 +81,23 @@ describe('Search Utils Unit Tests', () => {
         expect(result.success).toBe(false);
         expect(result.error).toContain('500');
     });
+
+    it('should handle network exceptions', async () => {
+        fetch.mockRejectedValueOnce(new Error('Network Error'));
+
+        const result = await searchWeb('network error');
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Network Error');
+    });
+
+    it('should return empty results if no topics and no abstract', async () => {
+        fetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ RelatedTopics: [] })
+        });
+
+        const result = await searchWeb('empty query');
+        expect(result.success).toBe(true);
+        expect(result.results).toHaveLength(0);
+    });
 });

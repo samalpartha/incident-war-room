@@ -88,8 +88,18 @@ modules:
     - key: list-incidents-action
       function: list-inc-handler
       name: List Team Issues
-      description: Retrieves active issues
+      description: Retrieves 5 recent active issues list (v3 GET asApp)
       actionType: query
+      inputs:
+        projectKey:
+          title: Project Key
+          type: string
+          required: false
+    - key: chaos-monkey-action
+      function: orchestrator-handler
+      name: Chaos Monkey Mode
+      description: Creates random critical incidents for chaos engineering testing
+      actionType: create
       inputs:
         projectKey:
           title: Project Key

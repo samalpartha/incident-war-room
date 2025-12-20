@@ -1,9 +1,14 @@
 
-import { getUserPermissions, getUserPrimaryRole, hasPermission, ROLES } from '../permissions';
+import { getUserPermissions, getUserPrimaryRole, hasPermission, ROLES, getUserGroups } from '../permissions';
 import api from '@forge/api';
 
+jest.mock('@forge/api', () => ({
+    asUser: jest.fn().mockReturnThis(),
+    requestJira: jest.fn(),
+    route: jest.fn((parts) => parts.join(''))
+}));
+
 // Unit Tests for Permissions Logic
-// No external dependencies mocked here except API if we test getUserGroups (which is async)
 
 describe('Permissions Utils Unit Tests', () => {
 
@@ -27,14 +32,23 @@ describe('Permissions Utils Unit Tests', () => {
             const perms = getUserPermissions(['observers', 'developers']);
             expect(perms).toContain('view'); // from observers
             expect(perms).toContain('comment'); // from developers
-            // Developer doesn't have create/delete
             expect(perms).not.toContain('delete');
+        });
+
+        it('should handle mixed valid and invalid groups (Line 39 coverage)', () => {
+            const perms = getUserPermissions(['incident-commanders', 'unknown-group']);
+            expect(perms).toContain('close');
+            // 'unknown-group' should be ignored safely
         });
     });
 
     describe('getUserPrimaryRole', () => {
         it('should prioritize commanders', () => {
             expect(getUserPrimaryRole(['developers', 'incident-commanders'])).toBe('incident-commanders');
+        });
+
+        it('should return on-call (Line 66 coverage)', () => {
+            expect(getUserPrimaryRole(['oncall-engineers'])).toBe('oncall-engineers');
         });
 
         it('should fallback to null for unknown groups', () => {
@@ -49,6 +63,23 @@ describe('Permissions Utils Unit Tests', () => {
 
         it('should return false if permission missing', () => {
             expect(hasPermission(['view'], 'delete')).toBe(false);
+        });
+    });
+
+    describe('getUserGroups (Async)', () => {
+        it('should return group names on success', async () => {
+            api.asUser().requestJira.mockResolvedValue({
+                json: async () => ([{ name: 'administrators' }, { name: 'users' }])
+            });
+
+            const groups = await getUserGroups('test-id');
+            expect(groups).toEqual(['administrators', 'users']);
+        });
+
+        it('should return empty array on API failure', async () => {
+            api.asUser().requestJira.mockRejectedValue(new Error('API Failure'));
+            const groups = await getUserGroups('test-id');
+            expect(groups).toEqual([]);
         });
     });
 });

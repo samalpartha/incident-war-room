@@ -1,25 +1,72 @@
 :root {
-    --bg-color: #0d1117;
-    --card-bg: #161b22;
-    --text-primary: #c9d1d9;
-    --accent-blue: #58a6ff;
-    --accent-green: #238636;
-    --accent-purple: #8957e5;
-    --accent-cyan: #39c5cf;
-    --accent-orange: #d25b07;
-    --border-color: #30363d;
+    /* Base - Deep Dark Theme */
+    --bg-color: #0F1115;
+    --card-bg: #1D2125;
+    --header-bg: #161B22;
+    /* Dark Header */
+    --text-primary: #E6EDF3;
+    --text-secondary: #7D8590;
+    --border-color: #30363D;
+
+    /* Brand Colors - Vibrant */
+    --accent-purple: #8B5CF6;
+    --accent-green: #10B981;
+    --accent-orange: #F97316;
+    --accent-cyan: #06B6D4;
+    --accent-blue: #3B82F6;
+    --accent-red: #EF4444;
+
+    /* War Room Status Colors */
+    --status-online: #238636;
+    --status-offline: #8b949e;
+
+    /* Input/Form */
+    --input-bg: #0D1117;
+    --bg-hover: #21262D;
+    --border-focus: #58A6FF;
+    --brand-primary: #58A6FF;
+
+    /* Tab Active State */
+    --tab-active-bg: #58A6FF;
+    --tab-active-text: #FFFFFF;
 }
 
 [data-theme='light'] {
-    --bg-color: #ffffff;
-    --card-bg: #f6f8fa;
-    --text-primary: #24292f;
-    --accent-blue: #0969da;
-    --accent-green: #1a7f37;
-    --accent-purple: #8250df;
-    --accent-cyan: #0593a1;
-    --accent-orange: #bc4c00;
-    --border-color: #d0d7de;
+    /* Light Mode - High Contrast & branded */
+    --bg-color: #F4F5F7;
+    /* Atlassian Light Gray */
+    --card-bg: #FFFFFF;
+    /* Pure White Cards */
+    --header-bg: #0052CC;
+    /* Atlassian Blue Header */
+    --text-primary: #172B4D;
+    /* Dark Slate Text */
+    --text-secondary: #5E6C84;
+    /* Cool Gray Text */
+    --border-color: #DFE1E6;
+    /* Light Border */
+
+    /* Colors on Light BG */
+    --accent-purple: #6554C0;
+    /* slightly darker for contrast */
+    --accent-green: #006644;
+    --accent-orange: #FF5630;
+    --accent-cyan: #008DA6;
+    --accent-blue: #0052CC;
+    --accent-red: #DE350B;
+
+    --status-online: #36B37E;
+
+    --input-bg: #FFFFFF;
+    --bg-hover: #EBECF0;
+    --border-focus: #4C9AFF;
+    --brand-primary: #0052CC;
+
+    /* Tab Active Light */
+    --tab-active-bg: #DEEBFF;
+    /* Light Blue Pill */
+    --tab-active-text: #0052CC;
+    /* Blue Text */
 }
 
 body {
@@ -28,113 +75,123 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
     padding: 20px;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .orchestrator-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
 }
 
+/* Header */
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 20px;
+    border-bottom: none;
+    padding: 20px;
+    background: var(--header-bg);
+    /* Use var for header bg */
+    border-radius: 8px;
+    /* Rounded header block like screenshot */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-h1 {
-    margin: 0;
-    font-size: 24px;
-    color: var(--accent-blue);
+/* Header Text needs to adapt based on BG */
+.header h1 {
+    color: var(--text-primary);
 }
 
-.status-badge {
-    background: rgba(35, 134, 54, 0.2);
-    color: #3fb950;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 12px;
-    border: 1px solid rgba(35, 134, 54, 0.5);
+[data-theme='light'] .header h1 {
+    color: #FFFFFF;
+    /* High contrast on Blue Header */
 }
 
-.main-grid {
-    display: grid;
-    grid-template-columns: 350px 1fr;
-    gap: 20px;
+/* Tabs - Pill Design */
+.tab-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    background: var(--card-bg);
+    padding: 8px;
+    /* Thicker padding */
+    border-radius: 50px;
+    border: 1px solid var(--border-color);
+    width: fit-content;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+.tab-pill {
+    padding: 8px 24px;
+    border-radius: 40px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    background: transparent;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.tab-pill.active {
+    background: var(--tab-active-bg);
+    color: var(--tab-active-text);
+}
+
+/* Cards */
 .card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 20px;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 h2 {
     margin-top: 0;
-    font-size: 18px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-}
-
-.input-group {
-    margin-bottom: 20px;
-}
-
-.input-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    font-size: 12px;
-    color: #8b949e;
-}
-
-.input-group input {
-    width: 100%;
-    padding: 8px;
-    background: #0d1117;
-    border: 1px solid var(--border-color);
-    color: white;
-    border-radius: 4px;
-}
-
-.action-buttons {
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    border-bottom: none;
+    margin-bottom: 15px;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 30px;
+    align-items: center;
+    gap: 8px;
 }
 
+/* Buttons */
 .btn {
-    padding: 10px;
+    padding: 0.75rem 1rem;
     border: none;
     border-radius: 6px;
-    color: white;
-    font-weight: bold;
+    color: white !important;
+    /* Force white text for solid buttons */
+    font-weight: 600;
+    font-size: 0.9rem;
     cursor: pointer;
-    transition: opacity 0.2s;
-    text-align: left;
+    transition: transform 0.1s, opacity 0.2s;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn:hover {
     opacity: 0.9;
+    transform: translateY(-1px);
 }
 
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
+/* Specific Button Colors */
 .btn-fix {
     background: var(--accent-purple);
 }
 
 .btn-assign {
-    background: var(--accent-blue);
+    background: var(--accent-cyan);
 }
 
 .btn-subtask {
@@ -142,66 +199,119 @@ h2 {
 }
 
 .btn-release {
-    background: var(--accent-cyan);
-    color: #000;
+    background: var(--accent-blue);
 }
 
 .btn-predict {
     background: var(--accent-orange);
 }
 
-.agents-toggle {
-    background: #0d1117;
-    padding: 15px;
-    border-radius: 6px;
+.btn-chaos {
+    background: var(--accent-red);
 }
 
-.agents-toggle h3 {
-    margin: 0 0 10px 0;
+/* Secondary Button (Theme Toggle, Lang) */
+.btn-secondary {
+    background: var(--bg-hover) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: none;
+}
+
+/* Base Styles */
+.main-grid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+}
+
+.main-grid-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group input,
+select,
+textarea {
+    width: 100%;
+    padding: 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 6px;
     font-size: 14px;
 }
 
-.agents-toggle label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    cursor: pointer;
+/* Pulse for Declare */
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
 }
 
-/* Log Stream */
+.pulse {
+    animation: pulse-red 2s infinite;
+}
+
+/* Grid for Rovo Buttons */
+.rovo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Logs */
 .log-stream {
-    height: 500px;
+    height: 400px;
     overflow-y: auto;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-family: monospace;
     font-size: 13px;
+    background: var(--input-bg);
+    border-radius: 6px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
 }
 
 .log-entry {
-    padding: 8px 0;
-    border-bottom: 1px solid #21262d;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
-    gap: 15px;
+    gap: 10px;
 }
 
 .log-entry .timestamp {
-    color: #8b949e;
-    min-width: 80px;
+    color: var(--text-secondary);
 }
 
 .log-entry.success .message {
-    color: #3fb950;
+    color: var(--accent-green);
 }
 
 .log-entry.error .message {
-    color: #f85149;
+    color: var(--accent-red);
 }
 
 .log-entry.pending .message {
-    color: #d2a8ff;
+    color: var(--accent-purple);
 }
 
 .log-entry.info .message {
     color: var(--text-primary);
+}
+
+/* Text Utilities */
+.text-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-weight: 600;
 }

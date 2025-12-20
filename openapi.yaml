@@ -1,0 +1,154 @@
+openapi: 3.0.3
+info:
+  title: Incident War Room API
+  description: |-
+    This is the Incident War Room API for managing incidents on Jira. Similar to Swagger Petstore demo,
+    this API allows you to create, read, update, and delete incidents, manage user permissions, and interact
+    with Jira projects.
+    
+    **Key Features:**
+    - Create and manage incidents
+    - Role-based access control (RBAC)
+    - Project management
+    - User assignments
+    - Audit trails
+    - **MCP Integration (Model Context Protocol)**
+    
+    **Live Instance:** [hackathondemoforge.atlassian.net](https://hackathondemoforge.atlassian.net/jira)
+    
+  version: 2.1.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local Proxy Server (CORS Enabled)
+
+tags:
+  - name: mcp
+    description: Model Context Protocol (AI Agent Interface)
+  - name: incident
+    description: Operations for managing incidents
+  - name: project
+    description: Operations for managing Jira projects
+
+paths:
+  /mcp/sse:
+    get:
+      tags:
+        - mcp
+      summary: Connect to MCP Server (SSE)
+      description: Establishes a Server-Sent Events connection for MCP protocol.
+      responses:
+        '200':
+          description: Stream established
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: "event: endpoint\ndata: /mcp/message\n\n"
+
+  /mcp/message:
+    post:
+      tags:
+        - mcp
+      summary: Send JSON-RPC Message
+      description: Send JSON-RPC 2.0 requests (initialize, tools/list, tools/call).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jsonrpc:
+                  type: string
+                  example: "2.0"
+                method:
+                  type: string
+                  example: "tools/list"
+                id:
+                  type: integer
+                  example: 1
+                params:
+                  type: object
+      responses:
+        '200':
+          description: JSON-RPC Response
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /chaos:
+    post:
+      tags:
+        - mcp
+      summary: Trigger Chaos Monkey (Create 3 Random Incidents)
+      responses:
+        '200':
+          description: Chaos successfully unleashed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /incidents:
+    get:
+      tags:
+        - incident
+      summary: Get list of incidents
+      responses:
+        '200':
+          description: Successful operation
+    post:
+      tags:
+        - incident
+      summary: Create a new incident
+      responses:
+        '201':
+          description: Incident created successfully
+
+  /incidents/{issueKey}:
+    get:
+      tags:
+        - incident
+      summary: Get incident by key
+      parameters:
+        - name: issueKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+
+  /projects:
+    get:
+      tags:
+        - project
+      summary: Get all projects
+      responses:
+        '200':
+          description: Successful operation
+
+  /search:
+    get:
+      tags:
+        - incident
+      summary: Search for issues (JQL)
+      description: Search using Jira Query Language (JQL) or keywords
+      parameters:
+        - name: jql
+          in: query
+          description: JQL query string (e.g. "summary ~ 'search term'")
+          required: true
+          schema:
+            type: string
+            example: project = KAN
+      responses:
+        '200':
+          description: Successful operation

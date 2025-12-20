@@ -1,0 +1,41 @@
+modules:
+  rovo:agent:
+    - key: rovoapp-hello-world-agent
+      name: Rovoapp
+      description: An agent for testing Forge agent functionality
+      prompt: >
+        You are a simple agent that helps Forge developers build their first
+        Rovo agent.
+
+        You can create Forge logs by using the hello-world-logger action.
+
+        If the user hasn't provided a message when they ask you to create a log
+        ask them to provide one.
+      conversationStarters:
+        - Log a message to Forge logs
+      actions:
+        - hello-world-logger
+  action:
+    - key: hello-world-logger
+      name: Log a message
+      function: messageLogger
+      actionVerb: GET
+      description: >
+        When a user asks to log a message, this action logs the message to the
+        Forge logs.
+      inputs:
+        message:
+          title: Message
+          type: string
+          required: true
+          description: |
+            "The message that the user has requested be logged to Forge logs"
+  function:
+    - key: messageLogger
+      handler: index.messageLogger
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/956d9d1f-a767-4dbf-a933-630d010d319f
