@@ -10,6 +10,18 @@
     --border-color: #30363d;
 }
 
+[data-theme='light'] {
+    --bg-color: #ffffff;
+    --card-bg: #f6f8fa;
+    --text-primary: #24292f;
+    --accent-blue: #0969da;
+    --accent-green: #1a7f37;
+    --accent-purple: #8250df;
+    --accent-cyan: #0593a1;
+    --accent-orange: #bc4c00;
+    --border-color: #d0d7de;
+}
+
 body {
     background-color: var(--bg-color);
     color: var(--text-primary);
