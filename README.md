@@ -125,6 +125,17 @@ Built-in quality assurance tools to ensure reliability.
 -   **100% Test Coverage:** Enforced by CI/CD pipelines.
 -   **E2E Simulation:** A live "Self-Health" check available directly in the dashboard (`/qa-dashboard.html`).
 
+### 4. ✅ Rovo Use Case Alignment
+We strictly adhere to [Atlassian's official Rovo Use Cases](https://www.atlassian.com/software/rovo/use-cases):
+
+| Official Rovo Use Case | Our Implementation | Status |
+| :--- | :--- | :--- |
+| **Readiness Checker** | **Auto-Fix Agent:** Rewrites vague tickets to ensure "Ready for Dev" status (ACs + Steps). | 🟢 Live |
+| **Issue Organizer** | **Smart Assign Agent:** Automatically routes tickets to the right person based on workload. | 🟢 Live |
+| **Release Notes Drafter** | **Release Notes Agent:** Aggregates 'Done' tickets into published release docs. | 🟢 Live |
+| **Triage Assistant** | **SLA Predictor:** Proactively identifies "At Risk" tickets before they breach. | 🟢 Live |
+| **Blocked Ticket Viewer** | **Incident Feed:** Surfaces stalled or high-priority items instantly. | 🟢 Live |
+
 ---
 
 ## 👩‍💻 Developer Setup
