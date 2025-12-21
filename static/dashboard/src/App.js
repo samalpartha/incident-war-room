@@ -26,6 +26,7 @@ const translations = {
     btn_subtask: "Gen Subtasks",
     btn_release: "Release Notes",
     btn_predict: "Predict Sprint",
+    btn_sla: "Check SLA Risk",
     btn_chaos: "Chaos Monkey Mode",
     active_agents: "Active Agents",
     agent_fixer: "Ticket Improver",
@@ -65,6 +66,7 @@ const translations = {
     btn_subtask: "Generar Subtareas",
     btn_release: "Notas de Versión",
     btn_predict: "Predecir Sprint",
+    btn_sla: "Verificar SLA",
     btn_chaos: "Modo Chaos Monkey",
     active_agents: "Agentes Activos",
     agent_fixer: "Mejorador de Tickets",
@@ -90,7 +92,7 @@ const translations = {
   }
 };
 
-const RovoControlPanel = ({ t, activeAgents, setActiveAgents, selectedIssue, setSelectedIssue, handleAutoFix, handleAutoAssign, handleSubtasks, handleReleaseNotes, handleSprintPrediction, handleChaos, startVoiceInput, isListening, invoke, addLog }) => (
+const RovoControlPanel = ({ t, activeAgents, setActiveAgents, selectedIssue, setSelectedIssue, handleAutoFix, handleAutoAssign, handleSubtasks, handleReleaseNotes, handleSprintPrediction, handleSlaCheck, handleChaos, startVoiceInput, isListening, invoke, addLog }) => (
   <div className="card rovo-controls">
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <h2 style={{ color: 'var(--accent-purple)', margin: 0 }}>🤖 {t('rovo_control_panel')}</h2>
@@ -127,6 +129,7 @@ const RovoControlPanel = ({ t, activeAgents, setActiveAgents, selectedIssue, set
       <button className="btn btn-subtask" onClick={handleSubtasks} disabled={!activeAgents.generator}>{t('btn_subtask')}</button>
 
       <button className="btn btn-predict" onClick={handleSprintPrediction} disabled={!activeAgents.predictor}>{t('btn_predict')}</button>
+      <button className="btn btn-assign" onClick={handleSlaCheck} style={{ background: 'var(--accent-blue)', color: 'white' }}>{t('btn_sla')}</button>
       <button className="btn btn-assign" onClick={handleAutoAssign} disabled={!activeAgents.assigner}>{t('btn_assign')}</button>
 
       <button className="btn btn-release" onClick={handleReleaseNotes} disabled={!activeAgents.release}>{t('btn_release')}</button>
@@ -339,6 +342,18 @@ function App() {
     }
   };
 
+  const handleSlaCheck = async () => {
+    if (!selectedIssue) return alert('⚠️ Please enter a ticket key');
+    addLog(`⏱️ Checking SLA status for ${selectedIssue}...`, "pending");
+    try {
+      const res = await invoke('predict-sla-risk-action', { issueKey: selectedIssue });
+      const icon = res.riskLevel === 'BREACHED' ? '🔥' : res.riskLevel === 'HIGH' ? '⚠️' : '✅';
+      addLog(`${icon} Risk: ${res.riskLevel} (${res.breachProbability}). Age: ${res.ageHours}h / Limit: ${res.slaLimitHours}h`, "success");
+    } catch (e) {
+      addLog(`❌ SLA Check Failed: ${e.message}`, "error");
+    }
+  };
+
   const handleChaos = async () => {
     // Removed window.confirm to prevent iframe blockers
     addLog("🐵 Chaos Monkey activated! Creating random critical incidents...", "pending");
@@ -536,7 +551,7 @@ function App() {
               selectedIssue={selectedIssue} setSelectedIssue={setSelectedIssue}
               handleAutoFix={handleAutoFix} handleAutoAssign={handleAutoAssign}
               handleSubtasks={handleSubtasks} handleReleaseNotes={handleReleaseNotes}
-              handleSprintPrediction={handleSprintPrediction} handleChaos={handleChaos}
+              handleSprintPrediction={handleSprintPrediction} handleSlaCheck={handleSlaCheck} handleChaos={handleChaos}
               startVoiceInput={startVoiceInput} isListening={isListening} invoke={invoke} addLog={addLog}
             />
           </div>
@@ -566,7 +581,7 @@ function App() {
                   selectedIssue={selectedIssue} setSelectedIssue={setSelectedIssue}
                   handleAutoFix={handleAutoFix} handleAutoAssign={handleAutoAssign}
                   handleSubtasks={handleSubtasks} handleReleaseNotes={handleReleaseNotes}
-                  handleSprintPrediction={handleSprintPrediction} handleChaos={handleChaos}
+                  handleSprintPrediction={handleSprintPrediction} handleSlaCheck={handleSlaCheck} handleChaos={handleChaos}
                   startVoiceInput={startVoiceInput} isListening={isListening} invoke={invoke} addLog={addLog}
                 />
                 <ActivityFeed t={t} logs={logs} />

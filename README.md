@@ -94,8 +94,9 @@ A production-grade React dashboard hosted directly within Jira.
 ### 2. 🤖 Rovo Agents
 Autonomous agents that live in the sidebar and chat.
 -   **Auto-Fix:** Instantly rewrites vague descriptions into structured requirements.
--   **Smart Assign:** Balances team workload using heuristic algorithms.
+-   **Smart Assign:** Balances team workload by assigning to the user with the fewer active tickets (lowest load).
 -   **Subtask Generator:** Breaks down epics into implementation plans.
+-   **SLA Breach Prediction:** AI-driven analysis of ticket age and priority to predict breach risks (Available via Rovo & Dashboard).
 
 ### 3. 🛡️ QA Command Center
 Built-in quality assurance tools to ensure reliability.
@@ -129,7 +130,7 @@ We utilize a custom proxy server to mock Atlassian APIs, enabling rapid local UI
 npm start
 \`\`\`
 *   **App URL:** `http://localhost:8080/qa-dashboard.html`
-*   **API Mock:** `http://localhost:8080/rest/api/3/...`
+*   **API Mock:** `http://localhost:8080/`
 
 ### 3. Testing Quality Gates
 \`\`\`bash

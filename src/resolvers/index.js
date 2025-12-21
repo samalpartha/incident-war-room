@@ -561,7 +561,7 @@ resolver.define('auto-fix-ticket-action', async (req) => {
   }
 });
 
-// 2. Auto-Assign
+// 2. Auto-Assign (Smart Implementation)
 resolver.define('auto-assign-ticket-action', async (req) => {
   const { issueKey } = req.payload;
   console.log(`[Auto-Assign] Processing ${issueKey}`);
@@ -579,6 +579,7 @@ resolver.define('auto-assign-ticket-action', async (req) => {
       throw new Error(`Ticket is already ${issue.fields.status.name}. Assignment skipped.`);
     }
 
+    // 1. Get Assignable Users
     const userRes = await api.asApp().requestJira(route`/rest/api/3/user/assignable/search?issueKey=${issueKey}`);
     if (!userRes.ok) throw new Error(`Failed to find assignable users.`);
     const users = await userRes.json();
@@ -587,7 +588,26 @@ resolver.define('auto-assign-ticket-action', async (req) => {
       throw new Error("No assignable users found for this ticket.");
     }
 
-    const bestUser = users[Math.floor(Math.random() * users.length)];
+    // 2. Get Workload for each user (Active Tickets)
+    // We'll limit to checking the first 5 users to performance
+    const candidates = users.slice(0, 5);
+    const workloads = [];
+
+    for (const user of candidates) {
+      const jql = `assignee = "${user.accountId}" AND statusCategory = "In Progress"`;
+      const loadRes = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jql}&maxResults=0`);
+      if (loadRes.ok) {
+        const loadData = await loadRes.json();
+        workloads.push({ user, count: loadData.total });
+      } else {
+        workloads.push({ user, count: 999 }); // Treat error as busy
+      }
+    }
+
+    // 3. Find user with lowest load
+    workloads.sort((a, b) => a.count - b.count);
+    const bestCandidate = workloads[0];
+    const bestUser = bestCandidate.user;
 
     const assignRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}/assignee`, {
       method: 'PUT',
@@ -599,7 +619,11 @@ resolver.define('auto-assign-ticket-action', async (req) => {
       throw new Error(`Assign failed: ${assignRes.status}`);
     }
 
-    return { success: true, assignedTo: bestUser.displayName, message: `Assigned to ${bestUser.displayName} based on workload analysis.` };
+    return {
+      success: true,
+      assignedTo: bestUser.displayName,
+      message: `Assigned to ${bestUser.displayName}. They have the lowest active load (${bestCandidate.count} tickets).`
+    };
   } catch (e) {
     console.error("Auto-Assign failed:", e);
     throw e;
@@ -758,6 +782,47 @@ resolver.define('predict-sprint-slippage-action', async (req) => {
     report: report,
     message: `Sprint Risk: ${slippageRisk}. ${report.recommendation}`
   };
+});
+
+// 7. Predict SLA Breach Risk (Heuristic)
+resolver.define('predict-sla-risk-action', async (req) => {
+  const { issueKey } = req.payload;
+  console.log(`[SLA Prediction] Analyzing ${issueKey}`);
+
+  try {
+    const res = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
+    if (!res.ok) throw new Error("Ticket not found");
+    const issue = await res.json();
+    const created = new Date(issue.fields.created);
+    const now = new Date();
+    const ageHours = (now - created) / (1000 * 60 * 60);
+
+    const priority = issue.fields.priority?.name || "Medium";
+
+    // Define implicit SLAs (in hours)
+    const slas = { "Highest": 4, "High": 24, "Medium": 48, "Low": 72, "Lowest": 120 };
+    const limit = slas[priority] || 48; // Default to Medium
+
+    const elapsedPercent = (ageHours / limit) * 100;
+
+    let risk = "LOW";
+    if (elapsedPercent > 100) risk = "BREACHED";
+    else if (elapsedPercent > 75) risk = "HIGH";
+    else if (elapsedPercent > 50) risk = "MEDIUM";
+
+    return {
+      success: true,
+      issueKey,
+      priority,
+      ageHours: ageHours.toFixed(1),
+      slaLimitHours: limit,
+      riskLevel: risk,
+      breachProbability: Math.min(Math.round(elapsedPercent), 100) + "%"
+    };
+  } catch (e) {
+    console.error("SLA Predict failed:", e);
+    return { success: false, error: e.message };
+  }
 });
 
 // 6. Chaos Monkey (Cool Feature)

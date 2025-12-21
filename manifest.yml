@@ -34,6 +34,7 @@ modules:
         - generate-release-notes-action
         - predict-sprint-slippage-action
         - list-incidents-action
+        - predict-sla-risk-action
   action:
     - key: generate-release-notes-action
       function: orchestrator-handler
@@ -105,6 +106,16 @@ modules:
           title: Project Key
           type: string
           required: false
+    - key: predict-sla-risk-action
+      function: orchestrator-handler
+      name: Predict SLA Breach Risk
+      description: Analyzes ticket age and priority to predict SLA breach probability
+      actionType: query
+      inputs:
+        issueKey:
+          title: Issue Key
+          type: string
+          required: true
   function:
     - key: resolver
       handler: index.handler

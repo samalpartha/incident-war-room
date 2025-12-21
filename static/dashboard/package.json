@@ -8,6 +8,7 @@
     "@atlaskit/form": "^9.0.10",
     "@atlaskit/textfield": "^6.0.1",
     "@forge/bridge": "5.10.1",
+    "boxicons": "^2.1.4",
     "react": "^16",
     "react-dom": "^16",
     "styled-components": "^6.1.19"
