@@ -461,9 +461,6 @@ function App() {
           <button onClick={toggleTheme} className="btn-secondary" style={{ padding: '5px 10px', fontSize: '0.8rem', borderRadius: '4px' }}>
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
-          <button onClick={() => setIsHelpOpen(true)} className="btn-secondary" style={{ padding: '5px 10px', fontSize: '1.2rem', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Dashboard Guide">
-            ❓
-          </button>
           <button onClick={() => setIsModalOpen(true)} className="btn pulse" style={{ background: 'var(--accent-red)', padding: '6px 16px', fontSize: '0.85rem' }}>
             🚨 {t('btn_declare')}
           </button>
@@ -473,10 +470,25 @@ function App() {
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
       {/* Tabs */}
-      <div className="tab-container">
+      <div className="tab-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <TabButton id="war-room" label={t('tab_war_room')} icon="🔥" />
         <TabButton id="orchestrator" label={t('tab_orchestrator')} icon="👥" />
         <TabButton id="unified" label={t('tab_unified')} icon="⚡" />
+
+        <button
+          onClick={() => setIsHelpOpen(true)}
+          className="tab-pill"
+          style={{
+            padding: '8px 12px',
+            borderRadius: '50%',
+            minWidth: 'auto',
+            background: 'var(--bg-hover)',
+            border: '1px solid var(--border-color)'
+          }}
+          title="Dashboard Guide"
+        >
+          ❓
+        </button>
       </div>
 
       <CreateTicketModal
