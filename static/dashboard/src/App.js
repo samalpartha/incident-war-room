@@ -431,6 +431,7 @@ function App() {
   };
 
   useEffect(() => {
+    console.log("🚀 VERSION: Help Icon Relocated v2 (Check Tab Container)");
     addLog("App Initialized", "info");
     fetchIncidents();
     const interval = setInterval(fetchIncidents, 30000); // Auto-refresh every 30s
