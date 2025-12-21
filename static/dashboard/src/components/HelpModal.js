@@ -41,6 +41,19 @@ const HelpModal = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="guide-section">
+                        <div className="guide-icon">🔗</div>
+                        <div className="guide-text">
+                            <h3>MCP "Knowledge Core"</h3>
+                            <p>Powered by the <strong>Model Context Protocol (MCP)</strong> for deep integration:</p>
+                            <ul>
+                                <li><strong>Jira & Confluence:</strong> Context-aware logic using live ticket and page data.</li>
+                                <li><strong>Bitbucket:</strong> Auto-generates release notes from actual commit history.</li>
+                                <li><strong>Rovo RAG:</strong> Agents retrieve institutional knowledge to suggest fixes.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="guide-section">
                         <div className="guide-icon">🎙️</div>
                         <div className="guide-text">
                             <h3>Voice Command</h3>
