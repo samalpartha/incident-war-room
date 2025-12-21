@@ -579,7 +579,7 @@ function App() {
       <footer style={{ textAlign: 'center', marginTop: '40px', padding: '20px', borderTop: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
         <p>Rovo Incident War Room & Orchestrator • v5.40.0</p>
         <p>
-          <a href="/qa-dashboard.html" target="_blank" style={{ color: 'var(--brand-primary)', textDecoration: 'none', fontWeight: 'bold' }}>
+          <a href="qa-dashboard.html" target="_blank" style={{ color: 'var(--brand-primary)', textDecoration: 'none', fontWeight: 'bold' }}>
             🚀 Open QA & E2E Report
           </a>
         </p>
