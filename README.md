@@ -39,6 +39,7 @@ graph TD
     subgraph "Intelligence & Execution"
         AutoFix[✨ Auto-Fix Agent]
         Assign[👤 Smart Assigner]
+        SLA[⏱️ SLA Predictor]
         Chaos[🐵 Chaos Monkey]
     end
 
@@ -54,6 +55,7 @@ graph TD
     Resolver --> Jira
     Agent --> AutoFix
     Agent --> Assign
+    Agent --> SLA
     Chaos --> Jira
     Resolver --> Storage
 \`\`\`
@@ -79,6 +81,26 @@ sequenceDiagram
     Agent->>Jira: Update Description
     Jira-->>Dev: Notification: "Ticket Updated"
     Note right of Dev: Ticket now has Steps & AC
+\`\`\`
+
+### 3. The Autonomous State Machine (UML)
+Track how the AI moves a ticket from creation to assignment without human touch.
+\`\`\`mermaid
+stateDiagram-v2
+    [*] --> NewTicket
+    NewTicket --> Analyzing: 🤖 Auto-Fix Triggered
+    Analyzing --> FixedSpecification: Added Criteria & Steps
+    Analyzing --> QualityGateFailed: Description too vague
+    
+    FixedSpecification --> CheckingSLA: ⏱️ Assess Urgency
+    CheckingSLA --> HighRisk: Age > 4h (Highest)
+    CheckingSLA --> NormalRisk
+    
+    NormalRisk --> Assigning: 👤 Smart Assign Triggered
+    HighRisk --> Assigning: Flag as Priority
+    
+    Assigning --> Assigned: Found user with lowest load
+    Assigned --> [*]
 \`\`\`
 
 ---
@@ -127,7 +149,8 @@ cd static/dashboard && npm install && cd ../..
 We utilize a custom proxy server to mock Atlassian APIs, enabling rapid local UI development.
 \`\`\`bash
 # Start the Proxy Server + React App
-npm start
+npm run proxy
+
 \`\`\`
 *   **App URL:** `http://localhost:8080/qa-dashboard.html`
 *   **API Mock:** `http://localhost:8080/`
@@ -138,8 +161,18 @@ npm start
 npm test
 
 # End-to-End Simulation
-node e2e_simulation.js
+# End-to-End Simulation
+npm run simulate
 \`\`\`
+
+---
+
+## 🛡️ AI Safety & Guardrails
+Trust is critical for agentic systems. We implement strict guardrails:
+1.  **Dry-Run Mode:** All destructive actions (e.g., Chaos Monkey) have a simulation mode for safe testing.
+2.  **Scope Limiting:** Agents are restricted to specific Projects (e.g., `KAN`) to prevent cross-project contamination.
+3.  **Human-in-the-Loop:** Critical decisions (e.g., locking deploys) require explicit user confirmation via the Dashboard UI.
+4.  **Audit Logging:** Every AI action is logged to the "Activity Feed" with a clear reason ("Assigned to Alice because...").
 
 ---
 
