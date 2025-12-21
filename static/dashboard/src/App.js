@@ -7,6 +7,7 @@ import PitCrew from './components/PitCrew';
 import IncidentList from './components/IncidentList';
 import ApiConsole from './components/ApiConsole';
 import CreateTicketModal from './components/CreateTicketModal';
+import HelpModal from './components/HelpModal';
 
 const translations = {
   en: {
@@ -176,6 +177,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
 
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const t = (key) => translations[lang][key] || key;
 
   const toggleTheme = () => {
@@ -183,7 +185,6 @@ function App() {
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
   };
-
   const addLog = (msg, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setLogs(prev => [{ time: timestamp, msg, type }, ...prev]);
@@ -460,11 +461,16 @@ function App() {
           <button onClick={toggleTheme} className="btn-secondary" style={{ padding: '5px 10px', fontSize: '0.8rem', borderRadius: '4px' }}>
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
+          <button onClick={() => setIsHelpOpen(true)} className="btn-secondary" style={{ padding: '5px 10px', fontSize: '1.2rem', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Dashboard Guide">
+            ❓
+          </button>
           <button onClick={() => setIsModalOpen(true)} className="btn pulse" style={{ background: 'var(--accent-red)', padding: '6px 16px', fontSize: '0.85rem' }}>
             🚨 {t('btn_declare')}
           </button>
         </div>
       </header>
+
+      <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
       {/* Tabs */}
       <div className="tab-container">
