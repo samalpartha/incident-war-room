@@ -2,52 +2,23 @@ import Resolver from '@forge/resolver';
 import api, { route, storage } from '@forge/api';
 import { Queue } from '@forge/events';
 import { getUserGroups, getUserPermissions, hasPermission, getUserPrimaryRole, ROLE_LABELS } from '../utils/permissions.js';
-import { searchWeb } from '../utils/search.js';
 import { v4 as uuidv4 } from 'uuid';
+
+// Services
+import { addComment } from '../services/jira.js';
+
+// Agents
+import { autoFixTicket } from '../agents/auto-fix.js';
+import { autoAssignTicket } from '../agents/auto-assign.js';
+import { generateSubtasks } from '../agents/subtask-generator.js';
+import { generateReleaseNotes } from '../agents/release-notes.js';
+import { predictSprintSlippage } from '../agents/sprint-predictor.js';
+import { predictSlaRisk } from '../agents/sla-predictor.js';
+import { chaosMonkey } from '../agents/chaos-monkey.js';
 
 const resolver = new Resolver();
 
-const getProjectKey = async () => {
-  const projectsRes = await api.asUser().requestJira(route`/rest/api/3/project/search?maxResults=1`);
-  const projectsData = await projectsRes.json();
-  if (projectsData.values.length === 0) throw new Error("No projects found.");
-  return projectsData.values[0].key;
-};
-
-// Helper: Add timeline comment to Jira issue
-const addComment = async (issueKey, commentText) => {
-  try {
-    const response = await api.asUser().requestJira(
-      route`/rest/api/3/issue/${issueKey}/comment`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          body: {
-            type: 'doc',
-            version: 1,
-            content: [
-              {
-                type: 'paragraph',
-                content: [{ type: 'text', text: commentText }]
-              }
-            ]
-          }
-        })
-      }
-    );
-
-    if (response.status === 201) {
-      console.log(`[TIMELINE] Comment added to ${issueKey}: ${commentText}`);
-      return true;
-    }
-    console.warn(`[TIMELINE] Failed to add comment to ${issueKey}, status: ${response.status}`);
-    return false;
-  } catch (error) {
-    console.error(`[TIMELINE] Error adding comment to ${issueKey}:`, error);
-    return false; // Don't fail the main operation if comment fails
-  }
-};
+// Data Fetchers (Dashboard)
 
 resolver.define('getProjects', async (req) => {
   try {
@@ -62,7 +33,6 @@ resolver.define('getProjectDetails', async (req) => {
   try {
     const response = await api.asUser().requestJira(route`/rest/api/3/project/${projectKey}`);
     const data = await response.json();
-    // Return just the issue types
     return {
       success: true,
       issueTypes: data.issueTypes ? data.issueTypes.map(it => ({ id: it.id, name: it.name, subtask: it.subtask })) : []
@@ -73,7 +43,6 @@ resolver.define('getProjectDetails', async (req) => {
   }
 });
 
-// RBAC: Get current user's context (groups, permissions, role)
 resolver.define('getUserContext', async (req) => {
   try {
     const accountId = req.context.accountId;
@@ -91,7 +60,6 @@ resolver.define('getUserContext', async (req) => {
     };
   } catch (error) {
     console.error('Error fetching user context:', error);
-    // Fallback to full access (preserve backward compatibility)
     return {
       success: true,
       accountId: req.context.accountId,
@@ -106,10 +74,9 @@ resolver.define('getUserContext', async (req) => {
 resolver.define('createIncident', async (req) => {
   const { summary, description, issueType, issueTypeId, projectKey, assigneeId } = req.payload;
 
-  // RBAC: Check if user has create permission
   const accountId = req.context.accountId;
   const groups = await getUserGroups(accountId);
-  const permissions = await getUserPermissions(groups); // Await this call
+  const permissions = await getUserPermissions(groups);
 
   if (!hasPermission(permissions, 'create')) {
     return { success: false, error: 'Permission denied: You do not have permission to create incidents' };
@@ -143,16 +110,9 @@ resolver.define('createIncident', async (req) => {
 
     const data = await response.json();
     if (response.status === 201) {
-      // Add timeline comment
-      await addComment(data.key, '🚨 Incident created via War Room at ' + new Date().toLocaleString('en-US', {
-        dateStyle: 'short',
-        timeStyle: 'medium',
-        timeZone: 'UTC'
-      }));
-
+      await addComment(data.key, '🚨 Incident created via War Room at ' + new Date().toLocaleString());
       return { success: true, key: data.key, id: data.id };
     }
-    // Return explicit error so frontend can show it
     return { success: false, error: JSON.stringify(data.errors || data) };
   } catch (error) {
     console.error(error);
@@ -166,17 +126,10 @@ resolver.define('getIncidents', async (req) => {
     let jql = 'ORDER BY created DESC';
     const conditions = [];
 
-    if (projectKey) {
-      conditions.push(`project = "${projectKey}"`);
-    }
+    if (projectKey) conditions.push(`project = "${projectKey}"`);
+    if (mine) conditions.push('creator = currentUser()');
 
-    if (mine) {
-      conditions.push('creator = currentUser()');
-    }
-
-    if (conditions.length > 0) {
-      jql = `${conditions.join(' AND ')} ${jql}`;
-    }
+    if (conditions.length > 0) jql = `${conditions.join(' AND ')} ${jql}`;
 
     const response = await api.asUser().requestJira(route`/rest/api/3/search?jql=${jql}&maxResults=100`);
     const data = await response.json();
@@ -195,20 +148,16 @@ resolver.define('getIssue', async (req) => {
 
 resolver.define('getUsers', async (req) => {
   try {
-    // Fetch all users, then filter for real humans only
     const response = await api.asUser().requestJira(route`/rest/api/3/users/search?maxResults=100`);
     const data = await response.json();
-
-    // Filter to only real human users (not bots/apps)
     const realUsers = data
-      .filter(u => u.accountType === 'atlassian') // Only human users
-      .slice(0, 10) // Limit to 10 users
+      .filter(u => u.accountType === 'atlassian')
+      .slice(0, 10)
       .map(u => ({
         accountId: u.accountId,
         displayName: u.displayName,
         avatarUrl: u.avatarUrls['48x48']
       }));
-
     return { success: true, users: realUsers };
   } catch (error) { console.error(error); throw error; }
 });
@@ -216,7 +165,6 @@ resolver.define('getUsers', async (req) => {
 resolver.define('updateIncident', async (req) => {
   const { issueIdOrKey, summary } = req.payload;
 
-  // RBAC: Check if user has update permission
   const accountId = req.context.accountId;
   const groups = await getUserGroups(accountId);
   const permissions = getUserPermissions(groups);
@@ -233,13 +181,7 @@ resolver.define('updateIncident', async (req) => {
       body: JSON.stringify(body)
     });
     if (response.status === 204) {
-      // Add timeline comment
-      await addComment(issueIdOrKey, '✏️ Summary updated via War Room at ' + new Date().toLocaleString('en-US', {
-        dateStyle: 'short',
-        timeStyle: 'medium',
-        timeZone: 'UTC'
-      }) + '. New summary: "' + summary + '"');
-
+      await addComment(issueIdOrKey, '✏️ Summary updated via War Room. New summary: "' + summary + '"');
       return { success: true, message: "Updated successfully" };
     }
     const data = await response.json();
@@ -250,7 +192,6 @@ resolver.define('updateIncident', async (req) => {
 resolver.define('deleteIncident', async (req) => {
   const { issueIdOrKey } = req.payload;
 
-  // RBAC: Check if user has delete permission
   const accountId = req.context.accountId;
   const groups = await getUserGroups(accountId);
   const permissions = getUserPermissions(groups);
@@ -260,13 +201,7 @@ resolver.define('deleteIncident', async (req) => {
   }
 
   try {
-    // Add timeline comment before deletion
-    await addComment(issueIdOrKey, '🗑️ Incident closed via War Room at ' + new Date().toLocaleString('en-US', {
-      dateStyle: 'short',
-      timeStyle: 'medium',
-      timeZone: 'UTC'
-    }));
-
+    await addComment(issueIdOrKey, '🗑️ Incident closed via War Room at ' + new Date().toLocaleString());
     const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueIdOrKey}`, {
       method: 'DELETE'
     });
@@ -279,12 +214,13 @@ resolver.define('deleteIncident', async (req) => {
   } catch (error) { console.error(error); throw error; }
 });
 
-// ===== ROVO AGENT ACTIONS =====
+// ===== AGENT DELEGATION =====
 
-// Action: Create Incident (for Rovo Agent)
+// Note: Handlers like 'create-incident-handler' are kept minimal or could also be moved to agents.
+// For now, I'll keep the purely transactional ones here and move the "Smart" ones.
+
 resolver.define('create-incident-handler', async (req) => {
   const { summary, description, projectKey, issueType, assigneeId } = req.payload || {};
-
   try {
     const fields = {
       project: { key: projectKey || 'KAN' },
@@ -292,101 +228,48 @@ resolver.define('create-incident-handler', async (req) => {
       description: description || 'No description provided',
       issuetype: { name: issueType || 'Task' }
     };
-
-    if (assigneeId) {
-      fields.assignee = { id: assigneeId };
-    }
+    if (assigneeId) fields.assignee = { id: assigneeId };
 
     const response = await api.asUser().requestJira(route`/rest/api/3/issue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields })
     });
-
     const result = await response.json();
-
-    return {
-      success: true,
-      message: `Incident ${result.key} created successfully`,
-      incidentKey: result.key,
-      url: `https://samalparthas.atlassian.net/browse/${result.key}`
-    };
+    return { success: true, message: `Incident ${result.key} created successfully`, incidentKey: result.key, url: `https://samalparthas.atlassian.net/browse/${result.key}` };
   } catch (error) {
-    console.error('Rovo create incident error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to create incident'
-    };
+    return { success: false, error: error.message || 'Failed to create incident' };
   }
 });
 
-// Action: List Incidents (for Rovo Agent)
 resolver.define('list-incidents-action', async (req) => {
   console.log("v2446: Executing list-incidents-action");
   const { projectKey } = req.payload || {};
-
   try {
-    let jql = 'ORDER BY created DESC';
-    if (projectKey) {
-      // Use clean JQL
-      jql = `project = ${projectKey} ${jql}`;
-    }
-
-    // Use GET v3 search (standard) and return version for debugging
-    // FIX 410: Migrating to /rest/api/3/search/jql as per deprecation notice
-    // Restoring safeJql and backendVersion which were accidentally removed
     const backendVersion = 'v2600-fix';
     const safeJql = projectKey ? `project = "${projectKey}" ORDER BY created DESC` : 'ORDER BY created DESC';
-
     const endpoint = route`/rest/api/3/search/jql?jql=${safeJql}&maxResults=5&fields=summary,status,assignee,created`;
-    console.log(`[ListIncidents] v2025-Migration: Calling ${endpoint}`);
-
     const response = await api.asApp().requestJira(endpoint);
-
     if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[ListIncidents] Jira API Error ${response.status}: ${errText}`);
-      return { success: false, error: `Jira API Error: ${response.status} (${backendVersion})`, backendVersion };
+      return { success: false, error: `Jira API Error: ${response.status}`, backendVersion };
     }
-
     const data = await response.json();
-
-    if (!data.issues) {
-      return { success: false, error: 'Invalid response from Jira', backendVersion };
-    }
-
     return {
-      success: true,
-      backendVersion,
-      incidents: data.issues.map(i => ({
-        key: i.key,
-        summary: i.fields.summary,
-        status: i.fields.status?.name || 'Unknown',
-        assignee: i.fields.assignee?.displayName || 'Unassigned',
-        created: i.fields.created
+      success: true, backendVersion, incidents: data.issues.map(i => ({
+        key: i.key, summary: i.fields.summary, status: i.fields.status?.name || 'Unknown', assignee: i.fields.assignee?.displayName || 'Unassigned', created: i.fields.created
       }))
     };
   } catch (error) {
-    console.error('Rovo list incidents error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to list incidents'
-    };
+    return { success: false, error: error.message };
   }
 });
 
-// Action: Get Incident Status (for Rovo Agent)
 resolver.define('get-incident-handler', async (req) => {
   const { issueKey } = req.payload || {};
-
-  if (!issueKey) {
-    return { success: false, error: 'Issue key is required' };
-  }
-
+  if (!issueKey) return { success: false, error: 'Issue key is required' };
   try {
     const response = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}`);
     const issue = await response.json();
-
     return {
       success: true,
       incident: {
@@ -400,483 +283,64 @@ resolver.define('get-incident-handler', async (req) => {
       }
     };
   } catch (error) {
-    console.error('Rovo get incident error:', error);
-    return {
-      success: false,
-      error: `Could not fetch ${issueKey}: ${error.message}`
-    };
+    return { success: false, error: `Could not fetch ${issueKey}: ${error.message}` };
   }
 });
 
-// Action: Search Solutions (for Rovo Agent) - Async Pattern
+// Async Search (Kept here as it's plumbing, not agent logic)
 resolver.define('search-solutions-handler', async (req) => {
   const { query } = req.payload || {};
-
-  if (!query) {
-    return { success: false, error: 'Search query is required' };
-  }
-
+  if (!query) return { success: false, error: 'Search query is required' };
   try {
-    // Generate unique job ID
     const jobId = `search-${uuidv4()}`;
-
-    console.log(`[SEARCH] Queuing async job ${jobId} for query: "${query}"`);
-
-    // Fire async event (doesn't wait for completion)
     const queue = new Queue({ key: 'async-search' });
-    await queue.push({
-      jobId,
-      query
-    });
-
-    // Return job ID immediately - frontend will poll for results
-    return {
-      success: true,
-      jobId,
-      message: `Search initiated for: "${query}"`,
-      status: 'pending',
-      polling: true // Signal to frontend to start polling
-    };
+    await queue.push({ jobId, query });
+    return { success: true, jobId, message: `Search initiated for: "${query}"`, status: 'pending', polling: true };
   } catch (error) {
-    console.error('[SEARCH] Failed to queue job:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to initiate search'
-    };
+    return { success: false, error: error.message };
   }
 });
 
-// Poll async job result from Forge Storage
 resolver.define('poll-job-result', async (req) => {
   const { jobId } = req.payload || {};
-
-  if (!jobId) {
-    return { success: false, error: 'Job ID required' };
-  }
-
+  if (!jobId) return { success: false, error: 'Job ID required' };
   try {
-    // Check Forge Storage for result
     const result = await storage.get(jobId);
-
-    if (!result) {
-      // Job still processing
-      return {
-        success: true,
-        status: 'pending',
-        message: 'Job still processing...'
-      };
-    }
-
-    // Job completed or failed - return the stored result
-    return {
-      success: true,
-      ...result
-    };
+    if (!result) return { success: true, status: 'pending', message: 'Job still processing...' };
+    return { success: true, ...result };
   } catch (error) {
-    console.error('[POLL] Error checking job status:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to check job status'
-    };
+    return { success: false, error: error.message };
   }
 });
 
-// ===== ORCHESTRATOR DASHBOARD ACTIONS =====
+// ===== DELEGATED AGENT ACTIONS (Modularized) =====
 
-// Helper: Validate Issue Key Format
-const isValidIssueKey = (key) => /^[A-Z][A-Z0-9]+-[0-9]+$/.test(key);
-
-// 1. Auto-Fix Ticket (Rewrite Description)
 resolver.define('auto-fix-ticket-action', async (req) => {
-  const { issueKey } = req.payload;
-  console.log(`[Auto-Fix] Processing ${issueKey}`);
-
-  if (!isValidIssueKey(issueKey)) {
-    throw new Error(`Invalid Issue Key format: "${issueKey}". Expected format like "KAN-123".`);
-  }
-
-  try {
-    const res = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
-    if (!res.ok) {
-      const err = await res.text();
-      if (res.status === 404) throw new Error(`Ticket ${issueKey} not found.`);
-      throw new Error(`Failed to fetch issue: ${res.status} - ${err}`);
-    }
-    const issue = await res.json();
-
-    // Business Logic: Don't fix closed tickets
-    const status = issue.fields.status?.name;
-    if (status === 'Done' || status === 'Closed') {
-      throw new Error(`Ticket is already ${status}. No action needed.`);
-    }
-
-    const improvedDescription = {
-      type: "doc",
-      version: 1,
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "✅ Improved by Rovo Orchestrator" }]
-        },
-        {
-          type: "heading",
-          attrs: { level: 3 },
-          content: [{ type: "text", text: "📋 Acceptance Criteria" }]
-        },
-        {
-          type: "bulletList",
-          content: [
-            { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Unit tests passed" }] }] },
-            { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Code reviewed" }] }] }
-          ]
-        },
-        {
-          type: "heading",
-          attrs: { level: 3 },
-          content: [{ type: "text", text: "🛠 Steps to Reproduce" }]
-        },
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "(Auto-generated structure for clarity)" }]
-        }
-      ]
-    };
-
-    const updateRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fields: { description: improvedDescription }
-      })
-    });
-
-    if (!updateRes.ok) {
-      throw new Error(`Update failed: ${updateRes.status}`);
-    }
-
-    return { success: true, message: `Ticket ${issueKey} improved with standardized structure.` };
-  } catch (e) {
-    console.error("Auto-Fix failed:", e);
-    throw e;
-  }
+  return await autoFixTicket(req.payload.issueKey);
 });
 
-// 2. Auto-Assign (Smart Implementation)
 resolver.define('auto-assign-ticket-action', async (req) => {
-  const { issueKey } = req.payload;
-  console.log(`[Auto-Assign] Processing ${issueKey}`);
-
-  if (!isValidIssueKey(issueKey)) {
-    throw new Error(`Invalid Issue Key format: "${issueKey}".`);
-  }
-
-  try {
-    // Check ticket status first
-    const issueCheck = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
-    if (!issueCheck.ok) throw new Error(`Ticket ${issueKey} not found.`);
-    const issue = await issueCheck.json();
-    if (issue.fields.status?.name === 'Done' || issue.fields.status?.name === 'Closed') {
-      throw new Error(`Ticket is already ${issue.fields.status.name}. Assignment skipped.`);
-    }
-
-    // 1. Get Assignable Users
-    const userRes = await api.asApp().requestJira(route`/rest/api/3/user/assignable/search?issueKey=${issueKey}`);
-    if (!userRes.ok) throw new Error(`Failed to find assignable users.`);
-    const users = await userRes.json();
-
-    if (!Array.isArray(users) || users.length === 0) {
-      throw new Error("No assignable users found for this ticket.");
-    }
-
-    // 2. Get Workload for each user (Active Tickets)
-    // We'll limit to checking the first 5 users to performance
-    const candidates = users.slice(0, 5);
-    const workloads = [];
-
-    for (const user of candidates) {
-      const jql = `assignee = "${user.accountId}" AND statusCategory = "In Progress"`;
-      const loadRes = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jql}&maxResults=0`);
-      if (loadRes.ok) {
-        const loadData = await loadRes.json();
-        workloads.push({ user, count: loadData.total });
-      } else {
-        workloads.push({ user, count: 999 }); // Treat error as busy
-      }
-    }
-
-    // 3. Find user with lowest load
-    workloads.sort((a, b) => a.count - b.count);
-    const bestCandidate = workloads[0];
-    const bestUser = bestCandidate.user;
-
-    const assignRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}/assignee`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountId: bestUser.accountId })
-    });
-
-    if (!assignRes.ok) {
-      throw new Error(`Assign failed: ${assignRes.status}`);
-    }
-
-    return {
-      success: true,
-      assignedTo: bestUser.displayName,
-      message: `Assigned to ${bestUser.displayName}. They have the lowest active load (${bestCandidate.count} tickets).`
-    };
-  } catch (e) {
-    console.error("Auto-Assign failed:", e);
-    throw e;
-  }
+  return await autoAssignTicket(req.payload.issueKey);
 });
 
-// 3. Generate Subtasks
 resolver.define('generate-subtasks-action', async (req) => {
-  const { issueKey } = req.payload;
-  console.log(`[Subtasks] Processing ${issueKey}`);
-
-  if (!isValidIssueKey(issueKey)) {
-    throw new Error(`Invalid Issue Key format.`);
-  }
-
-  try {
-    const issueRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
-    if (!issueRes.ok) throw new Error(`Ticket ${issueKey} not found.`);
-    const issue = await issueRes.json();
-
-    if (!issue.fields || !issue.fields.project) {
-      throw new Error(`Issue data incomplete. Missing project field.`);
-    }
-
-    // Don't add subtasks to closed tickets
-    if (issue.fields.status?.name === 'Done' || issue.fields.status?.name === 'Closed') {
-      throw new Error(`Ticket is closed. Cannot add subtasks.`);
-    }
-
-    const projectId = issue.fields.project.id;
-    const subtasks = ["Implementation", "Unit Testing", "Documentation Update"];
-    const created = [];
-
-    for (const title of subtasks) {
-      const body = {
-        fields: {
-          project: { id: projectId },
-          parent: { key: issueKey },
-          summary: `${title} - ${issueKey}`,
-          issuetype: { name: "Subtask" } // Use Name instead of ID 10003
-        }
-      };
-
-      // Use asUser() to ensure permissions
-      const res = await api.asUser().requestJira(route`/rest/api/3/issue`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      if (res.status === 201) {
-        const data = await res.json();
-        created.push(data.key);
-      } else {
-        console.error(`Failed subtask: ${res.status}`);
-      }
-    }
-
-    if (created.length === 0) {
-      throw new Error("Failed to create any subtasks. Check Issue Type permissions or Issue Type ID.");
-    }
-
-    return { success: true, createdSubtasks: created };
-  } catch (e) {
-    console.error("Subtasks failed:", e);
-    throw e;
-  }
+  return await generateSubtasks(req.payload.issueKey);
 });
 
-// 4. Generate Release Notes
 resolver.define('generate-release-notes-action', async (req) => {
-  const { version } = req.payload;
-
-  try {
-    const jql = "project = KAN AND status = Done ORDER BY updated DESC";
-    const res = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jql}&maxResults=5`);
-    const data = await res.json();
-
-    const features = data.issues ? data.issues.map(i => `- ${i.key}: ${i.fields.summary}`).join('\n') : "No recent merged features found.";
-
-    const notes = `
-      h1. 🚀 Release Notes: ${version}
-      
-      h2. 📦 Merged Features
-      ${features}
-      
-      h2. 🐛 Bug Fixes
-      - Fixed race condition in auth
-      - Resolved memory leak in dashboard
-      
-      _Generated by Rovo Orchestrator_
-      `;
-
-    // Create a persistent Jira Issue for these notes
-    let issueKey = null;
-    let issueLink = null;
-    try {
-      const createRes = await api.asApp().requestJira(route`/rest/api/3/issue`, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: {
-            project: { key: 'KAN' },
-            summary: `🚀 Release Notes: ${version}`,
-            description: {
-              type: 'doc',
-              version: 1,
-              content: [
-                { type: 'paragraph', content: [{ type: 'text', text: `Release Notes for ${version}` }] },
-                { type: 'codeBlock', content: [{ type: 'text', text: notes }] }
-              ]
-            },
-            issuetype: { id: '10001' } // Assuming Task
-          }
-        })
-      });
-      const createData = await createRes.json();
-      issueKey = createData.key;
-      issueLink = `/browse/${issueKey}`; // Relative link for frontend
-    } catch (err) {
-      console.error("Failed to save Release Notes to Jira:", err);
-    }
-
-    return {
-      success: true,
-      notes: notes,
-      issueKey: issueKey,
-      issueLink: issueLink,
-      message: `Generated Release Notes for ${version}. Saved as ${issueKey || 'Draft'}.`
-    };
-  } catch (e) {
-    console.error("Release Notes failed:", e);
-    throw e;
-  }
+  return await generateReleaseNotes(req.payload.version);
 });
 
-// 5. Predict Sprint Slippage
-resolver.define('predict-sprint-slippage-action', async (req) => {
-  // Simulation for Demo:
-  const velocity = 25; // Story points per sprint
-  const remainingParams = 32; // Points left
-  const daysLeft = 2;
-
-  const slippageRisk = (remainingParams / daysLeft) > (velocity / 10) ? "HIGH" : "LOW";
-
-  const report = {
-    velocity: velocity,
-    remainingPoints: remainingParams,
-    daysLeft: daysLeft,
-    riskLevel: slippageRisk,
-    recommendation: slippageRisk === "HIGH" ? "Scope Cut Required: Remove low priority tickets." : "On Track."
-  };
-
-  return {
-    success: true,
-    report: report,
-    message: `Sprint Risk: ${slippageRisk}. ${report.recommendation}`
-  };
+resolver.define('predict-sprint-slippage-action', async () => {
+  return await predictSprintSlippage();
 });
 
-// 7. Predict SLA Breach Risk (Heuristic)
 resolver.define('predict-sla-risk-action', async (req) => {
-  const { issueKey } = req.payload;
-  console.log(`[SLA Prediction] Analyzing ${issueKey}`);
-
-  try {
-    const res = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}`);
-    if (!res.ok) throw new Error("Ticket not found");
-    const issue = await res.json();
-    const created = new Date(issue.fields.created);
-    const now = new Date();
-    const ageHours = (now - created) / (1000 * 60 * 60);
-
-    const priority = issue.fields.priority?.name || "Medium";
-
-    // Define implicit SLAs (in hours)
-    const slas = { "Highest": 4, "High": 24, "Medium": 48, "Low": 72, "Lowest": 120 };
-    const limit = slas[priority] || 48; // Default to Medium
-
-    const elapsedPercent = (ageHours / limit) * 100;
-
-    let risk = "LOW";
-    if (elapsedPercent > 100) risk = "BREACHED";
-    else if (elapsedPercent > 75) risk = "HIGH";
-    else if (elapsedPercent > 50) risk = "MEDIUM";
-
-    return {
-      success: true,
-      issueKey,
-      priority,
-      ageHours: ageHours.toFixed(1),
-      slaLimitHours: limit,
-      riskLevel: risk,
-      breachProbability: Math.min(Math.round(elapsedPercent), 100) + "%"
-    };
-  } catch (e) {
-    console.error("SLA Predict failed:", e);
-    return { success: false, error: e.message };
-  }
+  return await predictSlaRisk(req.payload.issueKey);
 });
 
-// 6. Chaos Monkey (Cool Feature)
 resolver.define('chaos-monkey-action', async (req) => {
-  const { projectKey } = req.payload;
-  console.log(`[Chaos Monkey] Unleashing chaos on ${projectKey || 'KAN'}...`);
-
-  const scenarios = [
-    "🔥 Database CPU at 99%",
-    "🚨 Payment Gateway Timeout (504)",
-    "⚠️ Frontend Assets 404",
-    "💀 Memory Leak in Worker Node",
-    "🛑 API Rate Limit Breached"
-  ];
-
-  // Pick 3 random scenarios
-  const selected = scenarios.sort(() => 0.5 - Math.random()).slice(0, 3);
-  const createdKeys = [];
-
-  try {
-    for (const summary of selected) {
-      const body = {
-        fields: {
-          project: { key: projectKey || 'KAN' },
-          summary: `[CHAOS] ${summary}`,
-          issuetype: { name: "Task" }, // Keep "Task" as it is standard
-          description: {
-            type: "doc",
-            version: 1,
-            content: [{ type: "paragraph", content: [{ type: "text", text: "Auto-generated by Chaos Monkey 🐵. Investigate immediately!" }] }]
-          }
-          // Removing Priority to fallback to default
-        }
-      };
-
-      // Use asUser() to ensure permissions match the logged-in admin
-      const res = await api.asUser().requestJira(route`/rest/api/3/issue`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      if (res.status === 201) {
-        const data = await res.json();
-        createdKeys.push(data.key);
-        // Add comment
-        await addComment(data.key, '🔥 Chaos Monkey struck here!');
-      }
-    }
-    return { success: true, message: `⚠️ Chaos Unleashed! Created: ${createdKeys.join(', ')}` };
-  } catch (e) {
-    console.error("Chaos Monkey failed:", e);
-    throw e;
-  }
+  return await chaosMonkey(req.payload.projectKey);
 });
 
 export const handler = resolver.getDefinitions();
