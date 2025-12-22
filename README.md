@@ -74,42 +74,43 @@ How the system autonomously handles a new vague ticket from creation to assignme
 flowchart LR
     Start([🎫 New Ticket Created]):::start
     
-    subgraph Validation ["🤖 Phase 1: Quality Check"]
-        Check{Is Description Vague?}
+    subgraph Validation [" Phase 1: Quality Check "]
+        direction TB
+        Check{Detailed?}
         AutoFix[✨ Auto-Fix Agent]:::action
-        Update[📝 Update Jira Ticket]:::update
+        Update[📝 Update Jira]:::update
     end
     
-    subgraph Planning ["⏱️ Phase 2: Triage"]
+    subgraph Planning [" Phase 2: AI Triage "]
+        direction TB
         SLA{⚠️ Risk Level?}
         High[🔥 High Priority]:::danger
         Normal[✅ Normal Priority]:::safe
     end
     
-    subgraph Assignment ["👤 Phase 3: Smart Assign"]
-        CheckLoad{🔍 Check Team Workload}
-        Filter[🧹 Filter Bots/Apps]
-        Calc[🧮 Count Active Tickets]
-        Assign[🤝 Assign to Lowest Load]:::success
+    subgraph Assignment [" Phase 3: Smart Routing "]
+        direction TB
+        Load{🔍 Team Load}
+        Assign[🤝 Assign Best Dev]:::success
     end
 
     %% Flow
     Start --> Check
-    Check -->|Yes| AutoFix --> Update --> SLA
-    Check -->|No| SLA
+    Check -->|No| AutoFix --> Update --> SLA
+    Check -->|Yes| SLA
     
-    SLA -->|Age > 4h| High --> CheckLoad
-    SLA -->|Fresh| Normal --> CheckLoad
+    SLA -->|Urgent| High --> Load
+    SLA -->|Standard| Normal --> Load
     
-    CheckLoad --> Filter --> Calc --> Assign
+    Load --> Assign
     
     %% Styling
-    classDef start fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
-    classDef action fill:#ffe6cc,stroke:#d79b00,stroke-width:2px
-    classDef update fill:#d5e8d4,stroke:#82b366,stroke-width:2px
-    classDef danger fill:#f8cecc,stroke:#b85450,stroke-width:2px
-    classDef safe fill:#d5e8d4,stroke:#82b366,stroke-width:2px
-    classDef success fill:#d5e8d4,stroke:#82b366,stroke-width:4px
+    classDef start fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef action fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    classDef update fill:#f0f4c3,stroke:#c0ca33,stroke-width:2px
+    classDef danger fill:#ffcdd2,stroke:#c62828,stroke-width:2px,color:#b71c1c
+    classDef safe fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#1b5e20
+    classDef success fill:#dcedc8,stroke:#558b2f,stroke-width:4px,color:#33691e
 ```
 
 ### 3. Smart Assign Logic (Detailed Flow)
@@ -120,20 +121,21 @@ flowchart TD
     Start([👤 User Request: 'Smart Assign']):::start
     Fetch[📥 Fetch Assignable Users]
     
-    subgraph Filtering ["🧹 Filter & Validate"]
+    subgraph Filtering ["🧹 Filter Candidates"]
         IsHuman{Is User Human?}
-        Ignored[🚫 Ignore Bots/Apps]:::gray
+        Ignored([🚫 Discard Bot/App]):::gray
     end
     
     subgraph Workload ["🧮 Workload Calculation"]
-        Loop[🔁 For Each Candidate]
+        Loop[🔁 For Each Human User]
         Query[🔍 POST /rest/api/3/search/jql]
         Count{🔢 Count Issues}
-        Busy[⚠️ Set Count 999]:::busy
-        Real[✅ Set Real Count]:::good
+        Busy[⚠️ Error/Busy: Set 999]:::busy
+        Real[✅ Success: Set Actual Count]:::good
     end
     
     subgraph Decision ["🤝 Final Decision"]
+        Collect[📥 Collect Results]
         Sort[📉 Sort by Count ASC]
         Pick[🏆 Pick Top Candidate]
         Action[✍️ Update Jira Assignee]:::done
@@ -145,15 +147,16 @@ flowchart TD
     IsHuman -->|Yes| Query
     
     Query --> Count
-    Count -->|Errors/Deprecated| Busy
+    Count -->|Errors| Busy
     Count -->|Success| Real
     
-    Real & Busy & Ignored --> Sort
+    Real & Busy --> Collect
+    Collect --> Sort
     Sort --> Pick --> Action
     
     %% Styling
     classDef start fill:#dae8fc,stroke:#6c8ebf
-    classDef gray fill:#f5f5f5,stroke:#666,color:#999
+    classDef gray fill:#f5f5f5,stroke:#999,stroke-dasharray: 5 5,color:#999
     classDef busy fill:#f8cecc,stroke:#b85450
     classDef good fill:#d5e8d4,stroke:#82b366
     classDef done fill:#d5e8d4,stroke:#82b366,stroke-width:4px
