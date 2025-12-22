@@ -1,10 +1,19 @@
+<div align="center">
+
 # 🤖 Rovo Autonomous Team Orchestrator
 ### *The Next-Generation AI Command Center for DevOps*
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Atlassian_Forge-0052CC.svg) ![Category](https://img.shields.io/badge/category-Apps_for_Software_Teams-orange.svg) ![Status](https://img.shields.io/badge/status-Production_Ready-green.svg)
+![Rovo Banner](static/images/banner.png)
 
-> **2025 Hackathon Submission**
+![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square) 
+![Platform](https://img.shields.io/badge/platform-Atlassian_Forge-0052CC.svg?style=flat-square) 
+![Category](https://img.shields.io/badge/category-Apps_for_Software_Teams-orange.svg?style=flat-square) 
+![Status](https://img.shields.io/badge/status-Production_Ready-green.svg?style=flat-square)
+
+> **2025 Hackathon Submission** <br>
 > **Category:** "Apps for Software Teams" 🛠️
+
+</div>
 
 ---
 
