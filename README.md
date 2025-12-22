@@ -40,6 +40,8 @@ This isn't just automation; it's **Autonomy**.
 ### 1. High-Level System Design
 The system bridges the gap between conversational AI (Rovo/Claude) and structured DevOps data (Jira).
 
+> **👉 [Live App Link](https://hackathondemoforge.atlassian.net/jira/apps/e4ec4fba-f5f1-4dab-880f-d2c3f2042552/59db0921-84f8-4359-a712-fcf2176986fc)**
+
 ```mermaid
 flowchart TD
     subgraph Frontend ["🖥️ User Interfaces"]
