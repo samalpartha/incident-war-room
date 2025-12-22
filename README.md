@@ -9,11 +9,21 @@
 ---
 
 ## 🚀 Overview
-**Rovo Autonomous Team Orchestrator** is built to help software teams **perform like a finely tuned pit crew**. It removes friction by leveraging **Atlassian Rovo** and the **Model Context Protocol (MCP)** to proactively:
-*   **Accelerate Triage:** Autonomously fixes vague tickets.
-*   **Streamline Allocation:** "Smart Assigns" work based on real-time developer load.
-*   **Resolve Incidents:** Provides a live "War Room" to keep issues on track.
+**Rovo Autonomous Team Orchestrator** transforms Jira from a passive system of record into an **Agentic Command Center**, designed specifically to help software teams **perform like a finely tuned pit crew**.
 
+We built this app to solve the three biggest friction points that slow down high-velocity engineering teams:
+1.  **The "Vague Ticket" Problem:** Developers waste endless hours clarifying one-line requests like *"Fix login"*, resulting in back-and-forth delays.
+2.  **The Allocation Bottleneck:** Team leads struggle to manually balance workload, often leading to developer burnout or inefficient context switching.
+3.  **Incident Chaos:** Critical alerts often get buried in noise, lacking a unified view of the "War Front."
+
+**How We Remove the Friction:**
+By integrating **Atlassian Rovo Agents** with the **Model Context Protocol (MCP)**, our system doesn't just "notify" users—it **does the work**:
+
+*   **✨ Autonomous Readiness:** The **Auto-Fix Agent** acts as a "Pre-Flight Check." It intercepts vague tickets and instantly rewrites them with comprehensive *User Stories*, *Acceptance Criteria*, and *Implementation Steps* before a human even sees them.
+*   **⚖️ Smart Load Balancing:** Instead of random assignment, our **Smart Assign** engine uses a real-time algorithm to query the actual ticket load of every developer. It intelligently routes work to the person with the most bandwidth, ensuring the team flows efficiently.
+*   **🚨 The War Room:** A live, glassmorphism-styled dashboard that provides a single pane of glass for active incidents, SLA risks, and system health—keeping the entire pit crew in sync.
+
+This isn't just automation; it's **Autonomy**.
 ---
 
 ## ⚡️ Architecture 2025
