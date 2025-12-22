@@ -28,6 +28,7 @@
     "@forge/events": "^0.4.0",
     "@forge/resolver": "1.7.1",
     "dotenv": "^17.2.3",
+    "openai": "^6.15.0",
     "uuid": "^9.0.0"
   }
 }

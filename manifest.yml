@@ -59,11 +59,15 @@ modules:
     - key: auto-fix-ticket-action
       function: orchestrator-handler
       name: Improve Ticket Quality
-      description: Rewrites ticket description with acceptance criteria and structure
+      description: Updates ticket description with the provided improved content (Acceptance Criteria & Steps)
       actionType: update
       inputs:
         issueKey:
           title: Issue Key
+          type: string
+          required: true
+        improvedContent:
+          title: Improved Content
           type: string
           required: true
     - key: auto-assign-ticket-action

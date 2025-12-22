@@ -18,7 +18,7 @@ export const autoAssignTicket = async (issueKey) => {
         }
 
         // 1. Get Assignable Users
-        const userRes = await api.asApp().requestJira(route`/rest/api/3/user/assignable/search?issueKey=${issueKey}`);
+        const userRes = await api.asUser().requestJira(route`/rest/api/3/user/assignable/search?issueKey=${issueKey}`);
         if (!userRes.ok) throw new Error(`Failed to find assignable users.`);
         const users = await userRes.json();
 
@@ -28,16 +28,40 @@ export const autoAssignTicket = async (issueKey) => {
 
         // 2. Get Workload for each user (Active Tickets)
         // We'll limit to checking the first 5 users to performance
-        const candidates = users.slice(0, 5);
+        // Filter for human users only
+        const candidates = users.filter(u => u.accountType === 'atlassian').slice(0, 5);
+
+        if (candidates.length === 0) {
+            throw new Error("No human users found to assign.");
+        }
         const workloads = [];
 
         for (const user of candidates) {
-            const jql = `assignee = "${user.accountId}" AND statusCategory = "In Progress"`;
-            const loadRes = await api.asApp().requestJira(route`/rest/api/3/search?jql=${jql}&maxResults=0`);
+            // Check all open work, not just "In Progress"
+            const jql = `assignee = "${user.accountId}" AND statusCategory != "Done"`;
+
+            // Use POST /search/jql to avoid 410 Deprecated error
+            // Note: /search/jql does NOT return 'total' count, so we fetch up to 50
+            const loadRes = await api.asUser().requestJira(route`/rest/api/3/search/jql`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jql: jql,
+                    maxResults: 50
+                })
+            });
+
             if (loadRes.ok) {
                 const loadData = await loadRes.json();
-                workloads.push({ user, count: loadData.total });
+                let count = loadData.issues ? loadData.issues.length : 0;
+                // If there are more pages, it means they are very busy (>50)
+                if (loadData.issues && loadData.issues.length >= 50 && !loadData.isLast) {
+                    count = 999;
+                }
+                workloads.push({ user, count: count });
             } else {
+                const errBody = await loadRes.text();
+                console.error(`[Auto-Assign] Failed to check load for ${user.displayName}: ${loadRes.status}`, errBody);
                 workloads.push({ user, count: 999 }); // Treat error as busy
             }
         }
@@ -47,7 +71,7 @@ export const autoAssignTicket = async (issueKey) => {
         const bestCandidate = workloads[0];
         const bestUser = bestCandidate.user;
 
-        const assignRes = await api.asApp().requestJira(route`/rest/api/3/issue/${issueKey}/assignee`, {
+        const assignRes = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}/assignee`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accountId: bestUser.accountId })

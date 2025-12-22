@@ -86,7 +86,7 @@ resolver.define('createIncident', async (req) => {
     const fields = {
       project: { key: projectKey || 'KAN' },
       summary: summary,
-      issuetype: { id: issueTypeId || '10001' }
+      issuetype: issueTypeId ? { id: issueTypeId } : { name: issueType || 'Task' }
     };
 
     if (description) {
@@ -248,7 +248,7 @@ resolver.define('list-incidents-action', async (req) => {
   try {
     const backendVersion = 'v2600-fix';
     const safeJql = projectKey ? `project = "${projectKey}" ORDER BY created DESC` : 'ORDER BY created DESC';
-    const endpoint = route`/rest/api/3/search/jql?jql=${safeJql}&maxResults=5&fields=summary,status,assignee,created`;
+    const endpoint = route`/rest/api/3/search/jql?jql=${safeJql}&maxResults=20&fields=summary,status,assignee,created`;
     const response = await api.asApp().requestJira(endpoint);
     if (!response.ok) {
       return { success: false, error: `Jira API Error: ${response.status}`, backendVersion };
@@ -316,15 +316,31 @@ resolver.define('poll-job-result', async (req) => {
 // ===== DELEGATED AGENT ACTIONS (Modularized) =====
 
 resolver.define('auto-fix-ticket-action', async (req) => {
-  return await autoFixTicket(req.payload.issueKey);
+  try {
+    return await autoFixTicket(req.payload.issueKey, req.payload.improvedContent);
+  } catch (e) {
+    console.error(`[Auto-Fix] Failed:`, e);
+    return { success: false, error: e.message || "Failed to fix ticket." };
+  }
 });
 
 resolver.define('auto-assign-ticket-action', async (req) => {
-  return await autoAssignTicket(req.payload.issueKey);
+  try {
+    return await autoAssignTicket(req.payload.issueKey);
+  } catch (e) {
+    console.error(`[Auto-Assign] Failed:`, e);
+    return { success: false, error: e.message || "Failed to assign ticket." };
+  }
 });
 
 resolver.define('generate-subtasks-action', async (req) => {
-  return await generateSubtasks(req.payload.issueKey);
+  try {
+    const res = await generateSubtasks(req.payload.issueKey);
+    return res;
+  } catch (e) {
+    console.error(`[Subtasks] Failed:`, e);
+    return { success: false, error: e.message || "Failed to generate subtasks." };
+  }
 });
 
 resolver.define('generate-release-notes-action', async (req) => {

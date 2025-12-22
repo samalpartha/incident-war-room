@@ -273,15 +273,14 @@ function App() {
     addLog(`🔧 Auto-fixing ${selectedIssue}...`, "pending");
     try {
       const res = await invoke('auto-fix-ticket-action', { issueKey: selectedIssue });
-      addLog(`✅ ${res.message || 'Ticket improved successfully!'}`, "success");
-      fetchIncidents();
+      if (res.success) {
+        addLog(`✅ ${res.message || 'Ticket improved successfully!'}`, "success");
+        setTimeout(fetchIncidents, 1500);
+      } else {
+        addLog(`❌ Auto-Fix Failed: ${res.error}`, "error");
+      }
     } catch (e) {
-      const friendlyMsg = e.message.includes('not found')
-        ? `Ticket ${selectedIssue} doesn't exist. Please check the key.`
-        : e.message.includes('Closed') || e.message.includes('Done')
-          ? `Ticket ${selectedIssue} is already closed. No changes needed.`
-          : `Unable to improve ticket: ${e.message}`;
-      addLog(`❌ ${friendlyMsg}`, "error");
+      addLog(`❌ System Error: ${e.message}`, "error");
     }
   };
 
@@ -290,15 +289,14 @@ function App() {
     addLog(`👤 Finding best assignee for ${selectedIssue}...`, "pending");
     try {
       const res = await invoke('auto-assign-ticket-action', { issueKey: selectedIssue });
-      addLog(`✅ ${res.message || 'Ticket assigned successfully!'}`, "success");
-      fetchIncidents();
+      if (res.success) {
+        addLog(`✅ ${res.message || 'Ticket assigned successfully!'}`, "success");
+        setTimeout(fetchIncidents, 1500);
+      } else {
+        addLog(`❌ Smart Assign Failed: ${res.error}`, "error");
+      }
     } catch (e) {
-      const friendlyMsg = e.message.includes('not found')
-        ? `Ticket ${selectedIssue} doesn't exist. Please check the key.`
-        : e.message.includes('No assignable users')
-          ? `No team members available to assign this ticket.`
-          : `Unable to assign ticket: ${e.message}`;
-      addLog(`❌ ${friendlyMsg}`, "error");
+      addLog(`❌ System Error: ${e.message}`, "error");
     }
   };
 
@@ -307,16 +305,22 @@ function App() {
     addLog(`📋 Creating subtasks for ${selectedIssue}...`, "pending");
     try {
       const res = await invoke('generate-subtasks-action', { issueKey: selectedIssue });
-      const count = res.createdSubtasks ? res.createdSubtasks.length : 0;
-      addLog(`✅ Created ${count} subtasks: Implementation, Testing, Documentation`, "success");
-      fetchIncidents();
+
+      if (res.success) {
+        const createdKeys = res.createdSubtasks || [];
+        const count = createdKeys.length;
+
+        if (count > 0) {
+          addLog(`✅ Created ${count} subtasks: ${createdKeys.join(', ')}`, "success");
+        } else {
+          addLog(`⚠️ Process completed but no subtasks returned.`, "warning");
+        }
+        setTimeout(fetchIncidents, 1500);
+      } else {
+        addLog(`❌ Subtask Gen Failed: ${res.error}`, "error");
+      }
     } catch (e) {
-      const friendlyMsg = e.message.includes('not found')
-        ? `Ticket ${selectedIssue} doesn't exist. Please check the key.`
-        : e.message.includes('closed')
-          ? `Cannot add subtasks to a closed ticket.`
-          : `Unable to create subtasks: ${e.message}`;
-      addLog(`❌ ${friendlyMsg}`, "error");
+      addLog(`❌ System Error: ${e.message}`, "error");
     }
   };
 
@@ -513,7 +517,7 @@ function App() {
         onCreate={async (summary, desc, type, proj, assign, issueTypeId, assigneeId) => {
           addLog(`${t('creating_ticket')} ${summary}...`, "pending");
           try {
-            const res = await invoke('createIncident', { summary, description: desc, projectKey: proj, issueTypeId: issueTypeId || '10001' });
+            const res = await invoke('createIncident', { summary, description: desc, projectKey: proj, issueTypeId: issueTypeId || '10003' });
             addLog(`${t('success_created')} ${res.key || 'Ticket'}`, "success");
             setIsModalOpen(false);
             fetchIncidents();

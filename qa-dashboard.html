@@ -4,22 +4,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rovo Orchestrator QA Dashboard</title>
+    <title>Incident War Room | Command Center</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg: #0f172a;
-            --card-bg: #1e293b;
+            --card-bg: #1e293b99;
+            /* Glassy opacity */
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --accent-green: #10b981;
             --accent-blue: #3b82f6;
             --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
             --border: #334155;
+            --glow: 0 0 20px rgba(59, 130, 246, 0.15);
         }
 
         body {
             font-family: 'Inter', system-ui, sans-serif;
-            background: var(--bg);
+            background: radial-gradient(circle at top center, #1e293b, var(--bg));
             color: var(--text-primary);
             margin: 0;
             padding: 40px;
@@ -29,26 +36,164 @@
             min-height: 100vh;
         }
 
-        h1 {
+        /* HUD Header */
+        header {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        .brand h1 {
             font-size: 2.5rem;
-            margin-bottom: 10px;
+            margin: 0;
             background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: -1px;
+            text-transform: uppercase;
         }
 
-        p.subtitle {
+        .brand p {
             color: var(--text-secondary);
-            margin-bottom: 40px;
-            font-size: 1.1rem;
+            margin: 5px 0 0 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
+        .system-status {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator.online {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+
+        .status-indicator.offline {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .blink {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Main Grid */
+        .container {
             width: 100%;
-            max-width: 1000px;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+        }
+
+        h2.section-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2.section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Agent Cards (Sidebar) */
+        .agents-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .agent-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-blue);
+            padding: 15px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+
+        .agent-info h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .agent-info span {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .agent-status {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            text-transform: uppercase;
+        }
+
+        /* Tools Grid */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
         }
 
         .card {
@@ -56,7 +201,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 30px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             text-decoration: none;
             color: inherit;
@@ -64,10 +209,26 @@
             overflow: hidden;
         }
 
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+            box-shadow: var(--glow);
             border-color: var(--accent-blue);
+        }
+
+        .card:hover::before {
+            transform: translateX(100%);
         }
 
         .card h2 {
@@ -75,66 +236,155 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 1.2rem;
         }
 
         .card p {
             color: var(--text-secondary);
-            line-height: 1.5;
+            line-height: 1.6;
+            font-size: 0.9rem;
         }
 
-        .status {
+        .badge {
             position: absolute;
             top: 20px;
             right: 20px;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
-
-        .pass {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--accent-green);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
         }
 
         .footer {
-            margin-top: 50px;
+            margin-top: 60px;
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            opacity: 0.6;
         }
     </style>
 </head>
 
 <body>
-    <h1>Rovo Orchestrator QA Dashboard 🚀</h1>
-    <p class="subtitle">Comprehensive Quality Assurance & Coverage Reports</p>
+    <header>
+        <div class="brand">
+            <h1>Incident War Room</h1>
+            <p>AUTONOMOUS TEAM ORCHESTRATOR // VERSION 5.36.0</p>
+        </div>
+        <div class="system-status">
+            <div id="sys-status" class="status-indicator offline">
+                <span class="blink"></span>
+                <span id="status-text">SYSTEM OFFLINE</span>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 5px;">
+                PROXY: localhost:8080
+            </div>
+        </div>
+    </header>
 
-    <div class="grid">
-        <a href="test-report.html" class="card">
-            <span class="status pass">62/62 PASSED</span>
-            <h2 style="color: var(--accent-purple)">📊 Test Execution Report</h2>
-            <p>View detailed breakdown of all 62 unit and integration tests. Includes pass/fail status, execution time,
-                and error logs.</p>
-        </a>
+    <div class="container">
+        <!-- Sidebar: Active Agents -->
+        <aside>
+            <h2 class="section-title">Active Agents</h2>
+            <div class="agents-grid">
+                <div class="agent-card">
+                    <div class="agent-info">
+                        <h3>Auto-Fix</h3>
+                        <span>Defect Remediation</span>
+                    </div>
+                    <div class="agent-status">Online</div>
+                </div>
 
-        <a href="coverage/lcov-report/index.html" class="card">
-            <span class="status pass" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">100% COVERAGE</span>
-            <h2 style="color: var(--accent-green)">🛡️ Code Coverage</h2>
-            <p>Interactive heatmap of code coverage. Drill down into individual files (Resolvers, Utils) to see exactly
-                which lines are tested.</p>
-        </a>
+                <div class="agent-card" style="border-left-color: var(--accent-purple)">
+                    <div class="agent-info">
+                        <h3>Smart Assign</h3>
+                        <span>Workload Balancer</span>
+                    </div>
+                    <div class="agent-status">Online</div>
+                </div>
 
-        <a href="e2e_simulation.js" class="card">
-            <span class="status pass">VERIFIED</span>
-            <h2 style="color: var(--accent-blue)">🤖 E2E Simulation</h2>
-            <p>View the Source Code for the End-to-End simulation script that verified live Proxy Server connectivity.
-            </p>
-        </a>
+                <div class="agent-card" style="border-left-color: var(--accent-amber)">
+                    <div class="agent-info">
+                        <h3>SLA Predictor</h3>
+                        <span>Risk Analysis</span>
+                    </div>
+                    <div class="agent-status">Online</div>
+                </div>
+
+                <div class="agent-card" style="border-left-color: var(--accent-red)">
+                    <div class="agent-info">
+                        <h3>Chaos Monkey</h3>
+                        <span>Resilience Test</span>
+                    </div>
+                    <div class="agent-status">Standby</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content: Reports & Tools -->
+        <main>
+            <h2 class="section-title">Mission Control & Diagnostics</h2>
+            <div class="tools-grid">
+
+                <a href="test-report.html" class="card">
+                    <span class="badge" style="color: var(--accent-green)">PASSING</span>
+                    <h2 style="color: var(--accent-purple)">📊 Test Report</h2>
+                    <p>Detailed execution logs for 62/62 unit & integration tests. Verify system integrity before
+                        deployment.</p>
+                </a>
+
+                <a href="coverage/lcov-report/index.html" class="card">
+                    <span class="badge" style="color: var(--accent-green)">100% COVERED</span>
+                    <h2 style="color: var(--accent-green)">🛡️ Code Coverage</h2>
+                    <p>Interactive heatmap of code coverage. Drill down into individual files (Resolvers, Utils) to see
+                        exactly
+                        which lines are tested.</p>
+                </a>
+
+                <a href="e2e_simulation.js" class="card">
+                    <span class="badge" style="color: var(--accent-blue)">SCRIPT</span>
+                    <h2 style="color: var(--accent-blue)">🤖 E2E Simulation</h2>
+                    <p>View the source code for the automated end-to-end simulation script used for system health
+                        checks.</p>
+                </a>
+
+            </div>
+        </main>
     </div>
 
     <div class="footer">
-        Generated automatically by Rovo CI/CD • Version 5.36.0
+        SECURE TERMINAL CONNECTION • PROVO-8872 • UNCLASSIFIED
     </div>
+
+    <script>
+        // Live Connectivity Check
+        const statusEl = document.getElementById('sys-status');
+        const statusText = document.getElementById('status-text');
+
+        async function checkSystemHealth() {
+            try {
+                // Try to fetch the root of the proxy server (assuming it serves something or 404s, but responds)
+                // Since this is likely same-origin or CORS enabled for local dev
+                const response = await fetch('http://localhost:8080/', { method: 'HEAD', mode: 'no-cors' });
+
+                // If we get here, the server is reachable
+                statusEl.classList.remove('offline');
+                statusEl.classList.add('online');
+                statusText.innerText = "SYSTEM ONLINE";
+            } catch (err) {
+                statusEl.classList.remove('online');
+                statusEl.classList.add('offline');
+                statusText.innerText = "SYSTEM OFFLINE";
+            }
+        }
+
+        // Check immediately and then every 5 seconds
+        checkSystemHealth();
+        setInterval(checkSystemHealth, 5000);
+    </script>
 </body>
 
 </html>

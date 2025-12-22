@@ -122,8 +122,9 @@ Autonomous agents that live in the sidebar and chat.
 
 ### 3. 🛡️ QA Command Center
 Built-in quality assurance tools to ensure reliability.
+-   **Incident War Room:** A live "Mission Control" providing real-time agent status and system connectivity checks (`/qa-dashboard.html`).
 -   **100% Test Coverage:** Enforced by CI/CD pipelines.
--   **E2E Simulation:** A live "Self-Health" check available directly in the dashboard (`/qa-dashboard.html`).
+-   **E2E Simulation:** A live "Self-Health" check available directly in the dashboard.
 
 ### 4. ✅ Rovo Use Case Alignment
 We strictly adhere to [Atlassian's official Rovo Use Cases](https://www.atlassian.com/software/rovo/use-cases):

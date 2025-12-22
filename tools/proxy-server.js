@@ -267,7 +267,7 @@ const server = http.createServer(async (req, res) => {
         }
 
         // Default: Serve Swagger UI
-        fs.readFile(path.join(__dirname, 'api-docs.html'), (err, content) => {
+        fs.readFile(path.join(__dirname, '..', 'api-docs.html'), (err, content) => {
             if (err) { res.writeHead(404); res.end('Not found'); return; }
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(content);
@@ -340,7 +340,7 @@ const server = http.createServer(async (req, res) => {
 
     // Serve Static Files (openapi.yaml etc)
     if (parsedUrl.pathname === '/openapi.yaml') {
-        fs.readFile(path.join(__dirname, 'openapi.yaml'), (err, content) => {
+        fs.readFile(path.join(__dirname, '..', 'openapi.yaml'), (err, content) => {
             if (err) { res.writeHead(404); res.end('Not found'); return; }
             res.writeHead(200, { 'Content-Type': 'text/yaml' });
             res.end(content);
@@ -350,7 +350,7 @@ const server = http.createServer(async (req, res) => {
 
     // --- QA DASHBOARD SERVING ---
     if (parsedUrl.pathname === '/qa' || parsedUrl.pathname === '/qa-dashboard.html') {
-        fs.readFile(path.join(__dirname, 'qa-dashboard.html'), (err, content) => {
+        fs.readFile(path.join(__dirname, '..', 'qa-dashboard.html'), (err, content) => {
             if (err) { res.writeHead(404); res.end('Dashboard Not Found'); return; }
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(content);
@@ -359,7 +359,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (parsedUrl.pathname === '/test-report.html') {
-        fs.readFile(path.join(__dirname, 'test-report.html'), (err, content) => {
+        fs.readFile(path.join(__dirname, '..', 'test-report.html'), (err, content) => {
             if (err) { res.writeHead(404); res.end('Report Not Found'); return; }
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(content);
@@ -458,7 +458,7 @@ const server = http.createServer(async (req, res) => {
     // Serve Coverage Files (Recursive-ish for lcov)
     if (parsedUrl.pathname.startsWith('/coverage/')) {
         const safePath = path.normalize(parsedUrl.pathname).replace(/^(\.\.[\/\\])+/, '');
-        const filePath = path.join(__dirname, safePath);
+        const filePath = path.join(__dirname, '..', safePath);
 
         fs.readFile(filePath, (err, content) => {
             if (err) { res.writeHead(404); res.end('File Not Found'); return; }
