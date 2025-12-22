@@ -8,7 +8,7 @@
 
 ---
 
-## � Overview
+## 🚀 Overview
 **Rovo Autonomous Team Orchestrator** is a production-grade AI Agent suite designed to proactively manage Jira projects. Unlike passive chatbots that only answer questions, this system **takes action**. It serves as a unified "Mission Control" for engineering teams, leveraging **Atlassian Rovo** and the **Model Context Protocol (MCP)** to autonomously fix tickets, assign work, and manage incidents.
 
 ---
@@ -18,90 +18,146 @@
 ### 1. High-Level System Design
 The system bridges the gap between conversational AI (Rovo/Claude) and structured DevOps data (Jira).
 
-\`\`\`mermaid
-graph TD
-    subgraph "User Interfaces"
-        Chat[💬 Rovo Chat]
-        Dash[🖥️ React Dashboard]
-        IDE[💻 VS Code / Cursor]
+```mermaid
+flowchart TD
+    subgraph Frontend ["🖥️ User Interfaces"]
+        direction TB
+        UI1[💬 Rovo Chat]:::ui
+        UI2[🖥️ React Dashboard]:::ui
+        UI3[💻 VS Code / Cursor]:::ui
     end
 
-    subgraph "Orchestration Layer (Forge)"
+    subgraph Backend ["⚡️ Orchestration Layer (Forge)"]
         direction TB
-        Resolver[⚡️ FaaS Resolvers]
-        Agent[🤖 Rovo Agents]
-        MCP[🔌 MCP Interface]
+        Resolver{⚡️ FaaS Resolvers}:::core
+        Agent[🤖 Rovo Agents]:::core
+        MCP[🔌 MCP Interface]:::core
         
         Resolver <--> Agent
         Resolver <--> MCP
     end
 
-    subgraph "Intelligence & Execution"
-        AutoFix[✨ Auto-Fix Agent]
-        Assign[👤 Smart Assigner]
-        SLA[⏱️ SLA Predictor]
-        Chaos[🐵 Chaos Monkey]
+    subgraph Intelligence ["🧠 Intelligence & Execution"]
+        direction LR
+        AutoFix[✨ Auto-Fix Agent]:::ai
+        Assign[👤 Smart Assigner]:::ai
+        SLA[⏱️ SLA Predictor]:::ai
+        Chaos[🐵 Chaos Monkey]:::ai
     end
 
-    subgraph "Data Persistence"
-        Jira[Jira Cloud]
-        Storage[Forge Storage]
+    subgraph Data ["💾 Data Persistence"]
+        Jira[(☁️ Jira Cloud)]:::db
+        Storage[(📦 Forge Storage)]:::db
     end
 
-    Chat --> Agent
-    Dash --> Resolver
-    IDE -->|MCP Protocol| Resolver
+    %% Connections
+    UI1 & UI2 --> Resolver
+    UI3 -->|MCP Protocol| Resolver
     
     Resolver --> Jira
-    Agent --> AutoFix
-    Agent --> Assign
-    Agent --> SLA
-    Chaos --> Jira
     Resolver --> Storage
-\`\`\`
+    
+    Agent --> AutoFix & Assign & SLA & Chaos
+    Chaos --> Jira
+    
+    %% Styling
+    classDef ui fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1
+    classDef core fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#e65100
+    classDef ai fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20
+```
 
-### 2. Agentic Workflow: "The Life of a Ticket"
-How the Auto-Fix Agent autonomously improves quality without human intervention.
+### 2. Autonomous Incident Lifecycle (Flowchart)
+How the system autonomously handles a new vague ticket from creation to assignment.
 
-\`\`\`mermaid
-sequenceDiagram
-    participant Dev as 👨‍💻 Developer
-    participant Jira as 🎫 Jira
-    participant Agent as 🤖 Auto-Fix Agent
-    participant AI as 🧠 LLM Engine
+```mermaid
+flowchart LR
+    Start([🎫 New Ticket Created]):::start
+    
+    subgraph Validation ["🤖 Phase 1: Quality Check"]
+        Check{Is Description Vague?}
+        AutoFix[✨ Auto-Fix Agent]:::action
+        Update[📝 Update Jira Ticket]:::update
+    end
+    
+    subgraph Planning ["⏱️ Phase 2: Triage"]
+        SLA{⚠️ Risk Level?}
+        High[🔥 High Priority]:::danger
+        Normal[✅ Normal Priority]:::safe
+    end
+    
+    subgraph Assignment ["👤 Phase 3: Smart Assign"]
+        CheckLoad{🔍 Check Team Workload}
+        Filter[🧹 Filter Bots/Apps]
+        Calc[🧮 Count Active Tickets]
+        Assign[🤝 Assign to Lowest Load]:::success
+    end
 
-    Dev->>Jira: Creates Ticket ("Fix login bug")
-    Note right of Dev: Description is empty/vague
+    %% Flow
+    Start --> Check
+    Check -->|Yes| AutoFix --> Update --> SLA
+    Check -->|No| SLA
     
-    Jira->>Agent: Webhook / Trigger
-    Agent->>Jira: Read Ticket Details
-    Agent->>AI: Analyze & Generate Spec
-    AI-->>Agent: Returns Acceptance Criteria
+    SLA -->|Age > 4h| High --> CheckLoad
+    SLA -->|Fresh| Normal --> CheckLoad
     
-    Agent->>Jira: Update Description
-    Jira-->>Dev: Notification: "Ticket Updated"
-    Note right of Dev: Ticket now has Steps & AC
-\`\`\`
+    CheckLoad --> Filter --> Calc --> Assign
+    
+    %% Styling
+    classDef start fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    classDef action fill:#ffe6cc,stroke:#d79b00,stroke-width:2px
+    classDef update fill:#d5e8d4,stroke:#82b366,stroke-width:2px
+    classDef danger fill:#f8cecc,stroke:#b85450,stroke-width:2px
+    classDef safe fill:#d5e8d4,stroke:#82b366,stroke-width:2px
+    classDef success fill:#d5e8d4,stroke:#82b366,stroke-width:4px
+```
 
-### 3. The Autonomous State Machine (UML)
-Track how the AI moves a ticket from creation to assignment without human touch.
-\`\`\`mermaid
-stateDiagram-v2
-    [*] --> NewTicket
-    NewTicket --> Analyzing: 🤖 Auto-Fix Triggered
-    Analyzing --> FixedSpecification: Added Criteria & Steps
-    Analyzing --> QualityGateFailed: Description too vague
+### 3. Smart Assign Logic (Detailed Flow)
+The exact logic used to calculate workload and assign tickets.
+
+```mermaid
+flowchart TD
+    Start([👤 User Request: 'Smart Assign']):::start
+    Fetch[📥 Fetch Assignable Users]
     
-    FixedSpecification --> CheckingSLA: ⏱️ Assess Urgency
-    CheckingSLA --> HighRisk: Age > 4h (Highest)
-    CheckingSLA --> NormalRisk
+    subgraph Filtering ["🧹 Filter & Validate"]
+        IsHuman{Is User Human?}
+        Ignored[🚫 Ignore Bots/Apps]:::gray
+    end
     
-    NormalRisk --> Assigning: 👤 Smart Assign Triggered
-    HighRisk --> Assigning: Flag as Priority
+    subgraph Workload ["🧮 Workload Calculation"]
+        Loop[🔁 For Each Candidate]
+        Query[🔍 POST /rest/api/3/search/jql]
+        Count{🔢 Count Issues}
+        Busy[⚠️ Set Count 999]:::busy
+        Real[✅ Set Real Count]:::good
+    end
     
-    Assigning --> Assigned: Found user with lowest load
-    Assigned --> [*]
-\`\`\`
+    subgraph Decision ["🤝 Final Decision"]
+        Sort[📉 Sort by Count ASC]
+        Pick[🏆 Pick Top Candidate]
+        Action[✍️ Update Jira Assignee]:::done
+    end
+
+    Start --> Fetch --> Loop
+    Loop --> IsHuman
+    IsHuman -->|No| Ignored
+    IsHuman -->|Yes| Query
+    
+    Query --> Count
+    Count -->|Errors/Deprecated| Busy
+    Count -->|Success| Real
+    
+    Real & Busy & Ignored --> Sort
+    Sort --> Pick --> Action
+    
+    %% Styling
+    classDef start fill:#dae8fc,stroke:#6c8ebf
+    classDef gray fill:#f5f5f5,stroke:#666,color:#999
+    classDef busy fill:#f8cecc,stroke:#b85450
+    classDef good fill:#d5e8d4,stroke:#82b366
+    classDef done fill:#d5e8d4,stroke:#82b366,stroke-width:4px
+```
 
 ---
 
@@ -147,7 +203,7 @@ We strictly adhere to [Atlassian's official Rovo Use Cases](https://www.atlassia
 *   Docker (Optional, for local MCP server)
 
 ### 1. Installation
-\`\`\`bash
+```bash
 # Clone the repository
 git clone https://github.com/samalpartha/incident-war-room.git
 cd incident-war-room
@@ -155,27 +211,26 @@ cd incident-war-room
 # Install dependencies (Root + Dashboard)
 npm install
 cd static/dashboard && npm install && cd ../..
-\`\`\`
+```
 
 ### 2. Local Development (Proxy Mode)
 We utilize a custom proxy server to mock Atlassian APIs, enabling rapid local UI development.
-\`\`\`bash
+```bash
 # Start the Proxy Server + React App
 npm run proxy
 
-\`\`\`
+```
 *   **App URL:** `http://localhost:8080/qa-dashboard.html`
 *   **API Mock:** `http://localhost:8080/`
 
 ### 3. Testing Quality Gates
-\`\`\`bash
+```bash
 # Unit Tests (Jest)
 npm test
 
 # End-to-End Simulation
-# End-to-End Simulation
 npm run simulate
-\`\`\`
+```
 
 ---
 
