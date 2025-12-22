@@ -117,50 +117,38 @@ flowchart LR
 The exact logic used to calculate workload and assign tickets.
 
 ```mermaid
-flowchart TD
-    Start([👤 User Request: 'Smart Assign']):::start
-    Fetch[📥 Fetch Assignable Users]
+flowchart LR
+    Start([User: Smart Assign]):::start --> Fetch[Fetch Users]
     
-    subgraph Filtering ["🧹 Filter Candidates"]
-        IsHuman{Is User Human?}
-        Ignored([🚫 Discard Bot/App]):::gray
+    subgraph Filters ["🧹 Filter"]
+        direction TB
+        Fetch --> IsHuman{Human?}
+        IsHuman -->|No| Ignore([🚫 Ignore Packet]):::gray
     end
     
-    subgraph Workload ["🧮 Workload Calculation"]
-        Loop[🔁 For Each Human User]
-        Query[🔍 POST /rest/api/3/search/jql]
-        Count{🔢 Count Issues}
-        Busy[⚠️ Error/Busy: Set 999]:::busy
-        Real[✅ Success: Set Actual Count]:::good
+    subgraph Calc ["🧮 Workload"]
+        direction TB
+        IsHuman -->|Yes| Query[🔍 Check Jira]
+        Query --> Count{Count?}
+        Count -->|Error| Busy[⚠️ Set 999 (Busy)]:::busy
+        Count -->|OK| Real[✅ Set Actual]:::good
     end
     
-    subgraph Decision ["🤝 Final Decision"]
-        Collect[📥 Collect Results]
-        Sort[📉 Sort by Count ASC]
-        Pick[🏆 Pick Top Candidate]
-        Action[✍️ Update Jira Assignee]:::done
+    subgraph Action ["🚀 Execution"]
+        direction TB
+        Busy & Real --> Sort[📉 Sort ASC]
+        Sort --> Top[🏆 Pick Top 1]
+        Top --> Assign[✍️ Assign]:::done
     end
-
-    Start --> Fetch --> Loop
-    Loop --> IsHuman
-    IsHuman -->|No| Ignored
-    IsHuman -->|Yes| Query
-    
-    Query --> Count
-    Count -->|Errors| Busy
-    Count -->|Success| Real
-    
-    Real & Busy --> Collect
-    Collect --> Sort
-    Sort --> Pick --> Action
     
     %% Styling
     classDef start fill:#dae8fc,stroke:#6c8ebf
-    classDef gray fill:#f5f5f5,stroke:#999,stroke-dasharray: 5 5,color:#999
-    classDef busy fill:#f8cecc,stroke:#b85450
-    classDef good fill:#d5e8d4,stroke:#82b366
-    classDef done fill:#d5e8d4,stroke:#82b366,stroke-width:4px
+    classDef gray fill:#f5f5f5,stroke:#bbb,stroke-dasharray: 5 5,color:#bbb
+    classDef busy fill:#f8cecc,stroke:#b85450,color:#b85450
+    classDef good fill:#d5e8d4,stroke:#82b366,color:#4ca64c
+    classDef done fill:#d5e8d4,stroke:#82b366,stroke-width:3px
 ```
+> **Note:** A workload of `999` is assigned when an API error occurs or the user has >50 tickets, ensuring they are deprioritized (sorted last).
 
 ---
 
