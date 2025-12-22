@@ -3,7 +3,7 @@
 # 🤖 Rovo Autonomous Team Orchestrator
 ### *The Next-Generation AI Command Center for DevOps*
 
-<img src="static/images/banner.png" width="800" alt="Rovo Banner" style="border-radius: 10px; margin: 10px 0;">
+<img src="static/images/detailed_banner.jpg" alt="Rovo Architecture Banner" width="800" style="border-radius: 10px; margin-bottom: 20px;">
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square) 
 ![Platform](https://img.shields.io/badge/platform-Atlassian_Forge-0052CC.svg?style=flat-square) 
