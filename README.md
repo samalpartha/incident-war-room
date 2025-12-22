@@ -130,7 +130,7 @@ flowchart LR
         direction TB
         IsHuman -->|Yes| Query[🔍 Check Jira]
         Query --> Count{Count?}
-        Count -->|Error| Busy[⚠️ Set 999 (Busy)]:::busy
+        Count -->|Error| Busy["⚠️ Set 999 (Busy)"]:::busy
         Count -->|OK| Real[✅ Set Actual]:::good
     end
     
