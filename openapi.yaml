@@ -2,9 +2,11 @@ openapi: 3.0.3
 info:
   title: Incident War Room API
   description: |-
-    This is the Incident War Room API for managing incidents on Jira. Similar to Swagger Petstore demo,
-    this API allows you to create, read, update, and delete incidents, manage user permissions, and interact
-    with Jira projects.
+    This is the **Incident War Room API** for managing Jira incidents autonomously. 
+    It serves as the backend interface for the Rovo Agents and the React Dashboard, allowing you to:
+    - Create, read, and search incidents directly from Jira.
+    - Interact with Rovo Agents via MCP.
+    - Simulate outages (Chaos Monkey).
     
     **Key Features:**
     - Create and manage incidents
