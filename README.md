@@ -1,15 +1,18 @@
 # 🤖 Rovo Autonomous Team Orchestrator
 ### *The Next-Generation AI Command Center for DevOps*
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Atlassian_Forge-0052CC.svg) ![Coverage](https://img.shields.io/badge/coverage-100%25-success) ![Status](https://img.shields.io/badge/status-Production_Ready-green.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Platform](https://img.shields.io/badge/platform-Atlassian_Forge-0052CC.svg) ![Category](https://img.shields.io/badge/category-Apps_for_Software_Teams-orange.svg) ![Status](https://img.shields.io/badge/status-Production_Ready-green.svg)
 
-> **2025 Hackathon Edition**
-> **Theme:** "Agentic AI & Autonomous Workflows"
+> **2025 Hackathon Submission**
+> **Category:** "Apps for Software Teams" 🛠️
 
 ---
 
 ## 🚀 Overview
-**Rovo Autonomous Team Orchestrator** is a production-grade AI Agent suite designed to proactively manage Jira projects. Unlike passive chatbots that only answer questions, this system **takes action**. It serves as a unified "Mission Control" for engineering teams, leveraging **Atlassian Rovo** and the **Model Context Protocol (MCP)** to autonomously fix tickets, assign work, and manage incidents.
+**Rovo Autonomous Team Orchestrator** is built to help software teams **perform like a finely tuned pit crew**. It removes friction by leveraging **Atlassian Rovo** and the **Model Context Protocol (MCP)** to proactively:
+*   **Accelerate Triage:** Autonomously fixes vague tickets.
+*   **Streamline Allocation:** "Smart Assigns" work based on real-time developer load.
+*   **Resolve Incidents:** Provides a live "War Room" to keep issues on track.
 
 ---
 
